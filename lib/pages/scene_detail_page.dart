@@ -31,7 +31,34 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
   String _primaryFileId = '';
   bool _primaryBusy = false;
 
+  /// 封面是否宽屏（宽高比 >= 1.4）：宽屏铺满，方形/竖图完整显示不裁切。
+  bool _coverWide = true;
+
   StashApi get _api => buildApi();
+
+  /// 探测封面原始宽高比，决定铺满还是完整显示。
+  void _probeCoverRatio(String rawPath) {
+    if (rawPath.isEmpty) return;
+    final url = _api.imageUrl(rawPath);
+    if (url.isEmpty) return;
+    try {
+      final provider = NetworkImage(url, headers: _api.imageHeaders);
+      final stream = provider.resolve(ImageConfiguration.empty);
+      stream.addListener(
+        ImageStreamListener(
+          (info, _) {
+            if (!mounted) return;
+            final w = info.image.width.toDouble();
+            final h = info.image.height.toDouble();
+            if (h > 0) {
+              setState(() => _coverWide = (w / h) >= 1.4);
+            }
+          },
+          onError: (_, __) {},
+        ),
+      );
+    } catch (_) {}
+  }
 
   /// 设置默认文件（Stash 0.31+ SceneUpdateInput.primary_file_id）。
   Future<void> _setPrimaryFile(String fileId) async {
@@ -85,7 +112,11 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
         _scene = s;
         _loading = false;
       });
-      if (s == null && mounted) setState(() => _error = '加载失败');
+      if (s == null) {
+        if (mounted) setState(() => _error = '加载失败');
+      } else {
+        _probeCoverRatio(s.paths.raw);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -235,9 +266,13 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
+                        // 方形/竖图完整显示时的暗色底
+                        const Positioned.fill(
+                          child: ColoredBox(color: Color(0xFF0B0D12)),
+                        ),
                         AuthImage(
                           rawPath: s.paths.raw,
-                          fit: BoxFit.cover,
+                          fit: _coverWide ? BoxFit.cover : BoxFit.contain,
                           radius: 0,
                           fallbackIcon: Icons.movie_outlined,
                         ),
