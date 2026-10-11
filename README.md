@@ -1,6 +1,6 @@
 # StashScrubber（iOS 版）
 
-Stash 媒体库的 **iOS 客户端（Flutter）**，兼容 **Stash 0.31.x**。由鸿蒙 Flutter 版（StashScrubber-Harmony）移植，功能与 v1.6.64 完全同步。
+Stash 媒体库的 **iOS 客户端（Flutter）**，兼容 **Stash 0.31.x**。
 
 > 原 SwiftUI 原生 iOS 版（v1.6.0）已归档备份到分支 `backup/native-ios-1.6.0`。
 
