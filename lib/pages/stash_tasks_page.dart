@@ -41,6 +41,13 @@ class _StashTasksPageState extends State<StashTasksPage> {
   bool _genPhashes = false;
   bool _genSprites = false;
   bool _genHeatmaps = false;
+  bool _genMarkers = false;
+  bool _genMarkerImagePreviews = false;
+  bool _genMarkerScreenshots = false;
+  bool _genTranscodes = false;
+  bool _genImagePhashes = false;
+  bool _genImageThumbnails = false;
+  bool _genClipPreviews = false;
 
   // 清理
   bool _cleanDryRun = true;
@@ -428,6 +435,20 @@ class _StashTasksPageState extends State<StashTasksPage> {
               _switch('感知哈希', _genPhashes, (v) => _genPhashes = v),
               _switch('预览缩略图', _genSprites, (v) => _genSprites = v),
               _switch('交互热图', _genHeatmaps, (v) => _genHeatmaps = v),
+              _switch('标记图像', _genMarkers, (v) => _genMarkers = v,
+                  hint: '生成场景标记的预览图'),
+              _switch('标记图片预览', _genMarkerImagePreviews,
+                  (v) => _genMarkerImagePreviews = v),
+              _switch('标记截图', _genMarkerScreenshots,
+                  (v) => _genMarkerScreenshots = v),
+              _switch('转码', _genTranscodes, (v) => _genTranscodes = v,
+                  hint: '生成兼容格式以便在线播放'),
+              _switch('图片感知哈希', _genImagePhashes,
+                  (v) => _genImagePhashes = v),
+              _switch('图片缩略图', _genImageThumbnails,
+                  (v) => _genImageThumbnails = v),
+              _switch('片段预览', _genClipPreviews,
+                  (v) => _genClipPreviews = v),
               const SizedBox(height: 6),
               _submitButton(
                 '开始生成',
@@ -439,8 +460,15 @@ class _StashTasksPageState extends State<StashTasksPage> {
                     sprites: _genSprites,
                     previews: _genPreviews,
                     imagePreviews: _genImagePreviews,
+                    markers: _genMarkers,
+                    markerImagePreviews: _genMarkerImagePreviews,
+                    markerScreenshots: _genMarkerScreenshots,
+                    transcodes: _genTranscodes,
                     phashes: _genPhashes,
+                    imagePhashes: _genImagePhashes,
+                    imageThumbnails: _genImageThumbnails,
                     interactiveHeatmaps: _genHeatmaps,
+                    clipPreviews: _genClipPreviews,
                     overwrite: _genOverwrite,
                   ),
                   '生成任务已提交',
