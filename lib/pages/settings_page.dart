@@ -6,6 +6,8 @@ import 'diagnostics_page.dart';
 import 'net_log_page.dart';
 import 'server_settings_page.dart';
 import 'stash_tasks_page.dart';
+import 'identify_page.dart';
+import 'duplicate_page.dart';
 import 'tags_page.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -179,6 +181,28 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.manage_search_outlined),
+          title: const Text('批量识别'),
+          subtitle: const Text('按刮削源自动匹配短片元数据'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const IdentifyPage()),
+          ),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.content_copy_outlined),
+          title: const Text('去重'),
+          subtitle: const Text('按相似度查找重复短片并合并'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DuplicatePage()),
+          ),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.network_check),
           title: const Text('网络诊断'),
           trailing: const Icon(Icons.chevron_right),
@@ -201,7 +225,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 24),
         Text('关于', style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
-        Text('StashScrubber Flutter 1.6.71', style: theme.textTheme.bodySmall),
+        Text('StashScrubber Flutter 1.6.72', style: theme.textTheme.bodySmall),
         if (!_cfg.storageAvailable)
           Padding(
             padding: const EdgeInsets.only(top: 8),
