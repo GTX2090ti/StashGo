@@ -190,6 +190,10 @@ class Scene {
   final List<SceneFile> files;
   final List<String> captions;
 
+  /// 用户手动设置的封面图路径（Stash 的 scene.cover）。
+  /// 非空时优先于 paths.screenshot 显示。
+  final String cover;
+
   const Scene({
     required this.id,
     this.title = '',
@@ -207,6 +211,7 @@ class Scene {
     this.paths = const ScenePaths(),
     this.files = const [],
     this.captions = const [],
+    this.cover = '',
   });
 
   factory Scene.fromJson(dynamic j) => Scene(
@@ -227,6 +232,7 @@ class Scene {
         performers: Performer.listFrom(j?['performers']),
         tags: Tag.listFrom(j?['tags']),
         paths: ScenePaths.fromJson(j?['paths']),
+        cover: _s(j?['cover_image']),
         files: j?['files'] is List
             ? (j['files'] as List)
                 .map((e) => SceneFile.fromJson(e))
@@ -243,6 +249,9 @@ class Scene {
       _ml(v).map(Scene.fromJson).toList();
 
   String get displayTitle => title.isNotEmpty ? title : '（无标题）';
+
+  /// 优先用用户手动设置的封面（cover），否则回退到视频自动截图 paths.raw。
+  String get coverPath => cover.isNotEmpty ? cover : paths.raw;
 
   Scene copyWith({bool? organized}) => Scene(
         id: id,

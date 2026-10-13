@@ -760,7 +760,7 @@ class _SceneListPageState extends State<SceneListPage> {
                     ].join(' · ');
                     return SceneListCard(
                       title: s.title,
-                      rawCover: s.paths.raw,
+                      rawCover: s.coverPath,
                       date: s.date,
                       rating100: s.rating100,
                       organized: s.organized,

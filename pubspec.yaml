@@ -1,7 +1,7 @@
 name: stash_scrubber_flutter
 description: Stash media server client (Flutter, iOS / HarmonyOS).
 publish_to: 'none'
-version: 1.6.79+679
+version: 1.6.83+683
 
 environment:
   sdk: ^3.9.2

@@ -115,7 +115,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
       if (s == null) {
         if (mounted) setState(() => _error = '加载失败');
       } else {
-        _probeCoverRatio(s.paths.raw);
+        _probeCoverRatio(s.coverPath);
       }
     } catch (e) {
       if (!mounted) return;
@@ -271,8 +271,8 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                           child: ColoredBox(color: Color(0xFF0B0D12)),
                         ),
                         AuthImage(
-                          rawPath: s.paths.raw,
-                          fit: _coverWide ? BoxFit.cover : BoxFit.contain,
+                          rawPath: s.coverPath,
+                          fit: BoxFit.contain,
                           radius: 0,
                           fallbackIcon: Icons.movie_outlined,
                         ),
