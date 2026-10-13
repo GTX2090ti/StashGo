@@ -337,7 +337,7 @@ class _StudioListPageState extends State<StudioListPage> {
                   controller: _scroll,
                   padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: adaptiveColumnCount(c.maxWidth),
+                    crossAxisCount: adaptiveColumnCount(c.maxWidth, minCols: 3),
                     childAspectRatio: 1.0,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 12,

@@ -337,8 +337,8 @@ class _PerformerListPageState extends State<PerformerListPage> {
                   controller: _scroll,
                   padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: adaptiveColumnCount(c.maxWidth),
-                    mainAxisExtent: 86,
+                    crossAxisCount: adaptiveColumnCount(c.maxWidth, minCols: 3),
+                    childAspectRatio: 0.55,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
                   ),
@@ -359,22 +359,19 @@ class _PerformerListPageState extends State<PerformerListPage> {
                         ).then((v) {
                           if (v == true) _reload();
                         }),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Row(children: [
-                            SizedBox(
-                              width: 58,
-                              height: 58,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
                               child: AuthImage(
                                 rawPath: p.imagePath,
-                                radius: 8,
+                                radius: 0,
                                 fallbackIcon: Icons.person_outline,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
                               child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
@@ -386,9 +383,9 @@ class _PerformerListPageState extends State<PerformerListPage> {
                                         .bodyMedium
                                         ?.copyWith(
                                             fontWeight: FontWeight.w600,
-                                            fontSize: 13),
+                                            fontSize: 12),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 2),
                                   Text(
                                     '${p.sceneCount} 个场景',
                                     maxLines: 1,
@@ -396,12 +393,12 @@ class _PerformerListPageState extends State<PerformerListPage> {
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodySmall
-                                        ?.copyWith(fontSize: 11),
+                                        ?.copyWith(fontSize: 10),
                                   ),
                                 ],
                               ),
                             ),
-                          ]),
+                          ],
                         ),
                       ),
                     );
