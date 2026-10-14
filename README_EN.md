@@ -1,6 +1,6 @@
 # StashScrubber (iOS)
 
-An **iOS client (Flutter)** for the [Stash](https://github.com/stashapp/stash) media manager, compatible with **Stash 0.31.x**. Ported from the HarmonyOS Flutter version (StashScrubber-Harmony), feature-synced to v1.6.64.
+An **iOS client (Flutter)** for the [Stash](https://github.com/stashapp/stash) media manager, compatible with **Stash 0.31.x**. Ported from the HarmonyOS Flutter version (StashScrubber-Harmony), feature-synced to v1.6.85.
 
 > The original SwiftUI native iOS app (v1.6.0) is archived on branch `backup/native-ios-1.6.0`.
 
@@ -14,13 +14,21 @@ An **iOS client (Flutter)** for the [Stash](https://github.com/stashapp/stash) m
 - Two-column grid cards: cover, duration, resolution, favorite star, **subtitle badge** (shown when external captions are detected)
 - Infinite scroll with position restore on back; no paging buttons
 - Combined search: title / path / details + performer name + tag + studio
-- Sort (date newest-first, etc.) + filters (studio/performer/tag with search & multi-select) + batch actions (favorite / rating / tags / merge / generate covers)
+- Sort (date newest-first, etc.) + filters (studio/performer/tag with search & multi-select) + batch actions (favorite / rating / tags / merge / generate covers / set studio / add performers / select all)
 - Detail: scrape (**keeps existing studio**), edit, favorite, merge, generate cover, copy file path, performer/studio links
 - **Favorites page with 3 tabs**: Scenes (organized) / Performers (starred) / Studios (starred)
 
 ### Performers
 - Grid cards + infinite scroll + search; detail shows aliases (default 5, expandable), merge, delete, **favorite star**
-- Scrape (Stash-box / JavDB etc., keeps original name by default), edit, manual create
+- Detail grouped into collapsible sections (basics / body / career / images / social / record), collapsed state shows how many fields are filled; **age derived** from birth / death date
+- Edit and create share one full-field collapsible form; saving submits **only the diff** against the original values (a field you clear is really cleared server-side)
+- Scrape (Stash-box / JavDB etc., keeps original name by default), manual create
+
+### Batch tools
+- **Bulk identify**: multiple scrape sources (local scrapers / Stash-box) matched against scenes by priority
+- **Duplicates**: finds repeated scenes by perceptual-hash distance + duration delta, multi-select to merge
+- **Stats page**: library totals for scenes / images / performers / studios / tags
+- **Plugins page**: installed plugins with enabled state and task / hook counts
 
 ### Studios
 - Grid cards + infinite scroll + search; detail shows **parent / child studios** (navigable), **favorite star**, delete

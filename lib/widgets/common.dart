@@ -730,6 +730,68 @@ class SectionTitle extends StatelessWidget {
       );
 }
 
+/// 可折叠分组：点击标题展开 / 收起，收起时只显示标题与摘要。
+class FoldSection extends StatefulWidget {
+  const FoldSection({
+    super.key,
+    required this.title,
+    required this.children,
+    this.summary = '',
+    this.open = false,
+  });
+
+  final String title;
+
+  /// 收起状态下的概括文字，例如「3 项」「4 个链接」。
+  final String summary;
+  final bool open;
+  final List<Widget> children;
+
+  @override
+  State<FoldSection> createState() => _FoldSectionState();
+}
+
+class _FoldSectionState extends State<FoldSection> {
+  late bool _open = widget.open;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final suffix =
+        _open || widget.summary.isEmpty ? '' : '  ·  ${widget.summary}';
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      InkWell(
+        onTap: () => setState(() => _open = !_open),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 16, bottom: 6),
+          child: Row(children: [
+            Expanded(
+              child: Text(
+                '${widget.title}$suffix',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            Icon(_open ? Icons.expand_less : Icons.expand_more,
+                size: 18, color: theme.colorScheme.onSurfaceVariant),
+          ]),
+        ),
+      ),
+      AnimatedSize(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        alignment: Alignment.topCenter,
+        child: _open
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: widget.children,
+              )
+            : const SizedBox(width: double.infinity),
+      ),
+    ]);
+  }
+}
+
 /// 「标签 / 值」信息行。
 class InfoRow extends StatelessWidget {
   const InfoRow(this.label, this.value, {super.key, this.labelWidth = 84});

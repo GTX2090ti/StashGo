@@ -67,21 +67,68 @@ class Studio {
       _ml(v).map(Studio.fromJson).toList();
 }
 
+/// 性别枚举（Stash GenderEnum）中文标签，顺序即选择器顺序。
+const kGenderOptions = <(String, String)>[
+  ('FEMALE', '女性'),
+  ('MALE', '男性'),
+  ('TRANSGENDER_MALE', '跨性别男性'),
+  ('TRANSGENDER_FEMALE', '跨性别女性'),
+  ('INTERSEX', '双性人'),
+  ('NON_BINARY', '非二元'),
+];
+
+/// 环切状态（Stash CircumcisedEnum）。
+const kCircumcisedOptions = <(String, String)>[
+  ('CUT', '已环切'),
+  ('UNCUT', '未环切'),
+];
+
+String enumLabel(List<(String, String)> options, String value) {
+  for (final (v, l) in options) {
+    if (v == value) return l;
+  }
+  return value;
+}
+
+/// 演员模型。字段对齐 Stash 0.31.1 `Performer` 类型。
+/// 列表查询只回填精简字段，其余为空 / 0（详情页与编辑页用完整选择集）。
 class Performer {
   final String id;
   final String name;
   final String disambiguation;
   final String aliases;
+  final List<String> aliasParts;
   final String imagePath;
+  final String gender;
   final String birthdate;
-  final String country;
+  final String deathDate;
   final String ethnicity;
+  final String country;
+  final String eyeColor;
+  final String hairColor;
+  final int heightCm;
+  final int weight;
   final String measurements;
+  final String fakeTits;
+  final double penisLength;
+  final String circumcised;
+  final String careerStart;
+  final String careerEnd;
   final String careerLength;
+  final String tattoos;
+  final String piercings;
+  final List<String> urls;
   final String details;
   final int rating100;
-  final int sceneCount;
   final bool favorite;
+  final bool ignoreAutoTag;
+  final int sceneCount;
+  final int imageCount;
+  final int galleryCount;
+  final int groupCount;
+  final int oCounter;
+  final String createdAt;
+  final String updatedAt;
   final List<Tag> tags;
 
   const Performer({
@@ -89,16 +136,38 @@ class Performer {
     required this.name,
     this.disambiguation = '',
     this.aliases = '',
+    this.aliasParts = const [],
     this.imagePath = '',
+    this.gender = '',
     this.birthdate = '',
-    this.country = '',
+    this.deathDate = '',
     this.ethnicity = '',
+    this.country = '',
+    this.eyeColor = '',
+    this.hairColor = '',
+    this.heightCm = 0,
+    this.weight = 0,
     this.measurements = '',
+    this.fakeTits = '',
+    this.penisLength = 0,
+    this.circumcised = '',
+    this.careerStart = '',
+    this.careerEnd = '',
     this.careerLength = '',
+    this.tattoos = '',
+    this.piercings = '',
+    this.urls = const [],
     this.details = '',
     this.rating100 = 0,
-    this.sceneCount = 0,
     this.favorite = false,
+    this.ignoreAutoTag = false,
+    this.sceneCount = 0,
+    this.imageCount = 0,
+    this.galleryCount = 0,
+    this.groupCount = 0,
+    this.oCounter = 0,
+    this.createdAt = '',
+    this.updatedAt = '',
     this.tags = const [],
   });
 
@@ -106,20 +175,65 @@ class Performer {
         id: _s(j?['id']),
         name: _s(j?['name']),
         disambiguation: _s(j?['disambiguation']),
-        // 本地 Performer 的别名字段为 alias_list（String 数组）
+        // 0.31.1 起别名为 alias_list（String 数组）；aliases 保留逗号串供旧调用方使用
+        aliasParts: _sl(j?['alias_list']),
         aliases: _sl(j?['alias_list']).join(', '),
         imagePath: _s(j?['image_path']),
+        gender: _s(j?['gender']),
         birthdate: _s(j?['birthdate']),
-        country: _s(j?['country']),
+        deathDate: _s(j?['death_date']),
         ethnicity: _s(j?['ethnicity']),
+        country: _s(j?['country']),
+        eyeColor: _s(j?['eye_color']),
+        hairColor: _s(j?['hair_color']),
+        heightCm: _i(j?['height_cm']),
+        weight: _i(j?['weight']),
         measurements: _s(j?['measurements']),
+        fakeTits: _s(j?['fake_tits']),
+        penisLength:
+            j?['penis_length'] is num ? (j?['penis_length'] as num).toDouble() : 0,
+        circumcised: _s(j?['circumcised']),
+        careerStart: _s(j?['career_start']),
+        careerEnd: _s(j?['career_end']),
         careerLength: _s(j?['career_length']),
+        tattoos: _s(j?['tattoos']),
+        piercings: _s(j?['piercings']),
+        urls: _sl(j?['urls']),
         details: _s(j?['details']),
         rating100: _i(j?['rating100']),
-        sceneCount: _i(j?['scene_count']),
         favorite: j?['favorite'] == true,
+        ignoreAutoTag: j?['ignore_auto_tag'] == true,
+        sceneCount: _i(j?['scene_count']),
+        imageCount: _i(j?['image_count']),
+        galleryCount: _i(j?['gallery_count']),
+        groupCount: _i(j?['group_count']),
+        oCounter: _i(j?['o_counter']),
+        createdAt: _s(j?['created_at']),
+        updatedAt: _s(j?['updated_at']),
         tags: Tag.listFrom(j?['tags']),
       );
+
+  /// 从业区间：优先 career_start / career_end，回退已废弃的 career_length。
+  String get careerText {
+    if (careerStart.isNotEmpty || careerEnd.isNotEmpty) {
+      return [careerStart, careerEnd].where((e) => e.isNotEmpty).join(' - ');
+    }
+    return careerLength;
+  }
+
+  /// 年龄：Stash 无此字段，按出生日期推算；已故则算到去世日期。
+  String get ageText {
+    final b = DateTime.tryParse(birthdate);
+    if (b == null) return '';
+    final end = DateTime.tryParse(deathDate) ?? DateTime.now();
+    var age = end.year - b.year;
+    if (end.month < b.month ||
+        (end.month == b.month && end.day < b.day)) {
+      age--;
+    }
+    if (age < 0) return '';
+    return deathDate.isNotEmpty ? '$age 岁（去世时）' : '$age 岁';
+  }
 
   static List<Performer> listFrom(dynamic v) =>
       _ml(v).map(Performer.fromJson).toList();

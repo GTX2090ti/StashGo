@@ -861,16 +861,47 @@ class StashApi {
     return s == null ? null : Scene.fromJson(s);
   }
 
+  /// 演员完整档案想要的字段（Stash 0.31.1 `Performer`）。
+  static const _performerWantFields = <String>[
+    'id', 'name', 'disambiguation', 'alias_list', 'image_path', 'gender',
+    'birthdate', 'death_date', 'ethnicity', 'country', 'eye_color',
+    'hair_color', 'height_cm', 'weight', 'measurements', 'fake_tits',
+    'penis_length', 'circumcised', 'career_start', 'career_end',
+    'career_length', 'tattoos', 'piercings', 'urls', 'details', 'rating100',
+    'favorite', 'ignore_auto_tag', 'scene_count', 'image_count',
+    'gallery_count', 'group_count', 'o_counter', 'created_at', 'updated_at',
+  ];
+
+  static Set<String>? _performerFieldCache;
+
+  /// 服务端 Performer 类型实际有的字段；用于裁剪选择集，避免旧版服务器整条查询报错。
+  Future<Set<String>> performerFields() async {
+    final cached = _performerFieldCache;
+    if (cached != null) return cached;
+    var out = const <String>{};
+    try {
+      final d = await query('query { __type(name: "Performer") { fields { name } } }');
+      final fs = d?['__type']?['fields'];
+      if (fs is List) {
+        out = fs
+            .map((e) => e is Map ? e['name']?.toString() ?? '' : '')
+            .where((s) => s.isNotEmpty)
+            .toSet();
+      }
+    } catch (_) {}
+    if (out.isNotEmpty) _performerFieldCache = out;
+    return out;
+  }
+
   Future<Performer?> findPerformer(String id) async {
-    const q = '''
-      query FindPerformer(\$id: ID!) {
-        findPerformer(id: \$id) {
-          id name disambiguation alias_list image_path birthdate country ethnicity
-          measurements career_length details rating100 favorite
-          tags { id name }
-        }
-      }''';
-    final d = await query(q, {'id': id});
+    final have = await performerFields();
+    final fields = have.isEmpty
+        ? _performerWantFields
+        : _performerWantFields.where((f) => have.contains(f)).toList();
+    final selection = fields.join(' ');
+    final d = await query(
+        'query FindPerformer(\$id: ID!) { findPerformer(id: \$id) { $selection tags { id name } } }',
+        {'id': id});
     final p = d?['findPerformer'];
     return p == null ? null : Performer.fromJson(p);
   }
