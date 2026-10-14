@@ -6,7 +6,11 @@ import 'diagnostics_page.dart';
 import 'net_log_page.dart';
 import 'server_settings_page.dart';
 import 'stash_tasks_page.dart';
+import 'identify_page.dart';
+import 'duplicate_page.dart';
 import 'tags_page.dart';
+import 'stats_page.dart';
+import 'plugins_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, this.embedded = false});
@@ -179,6 +183,50 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.manage_search_outlined),
+          title: const Text('批量识别'),
+          subtitle: const Text('按刮削源自动匹配短片元数据'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const IdentifyPage()),
+          ),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.content_copy_outlined),
+          title: const Text('去重'),
+          subtitle: const Text('按相似度查找重复短片并合并'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DuplicatePage()),
+          ),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.insights_outlined),
+          title: const Text('统计'),
+          subtitle: const Text('短片/图片/演员/工作室等媒体库汇总'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StatsPage()),
+          ),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.extension_outlined),
+          title: const Text('插件'),
+          subtitle: const Text('查看已安装插件及其任务/钩子'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PluginsPage()),
+          ),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.network_check),
           title: const Text('网络诊断'),
           trailing: const Icon(Icons.chevron_right),
@@ -201,7 +249,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 24),
         Text('关于', style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
-        Text('StashScrubber Flutter 1.6.71', style: theme.textTheme.bodySmall),
+        Text('StashScrubber Flutter 1.6.84', style: theme.textTheme.bodySmall),
         if (!_cfg.storageAvailable)
           Padding(
             padding: const EdgeInsets.only(top: 8),

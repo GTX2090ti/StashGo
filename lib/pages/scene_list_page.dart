@@ -408,6 +408,94 @@ class _SceneListPageState extends State<SceneListPage> {
     if (v != null) await _batchRating(v);
   }
 
+  /// 批量设置工作室：所有选中短片统一设为同一个工作室。
+  Future<void> _batchStudio() async {
+    if (_selected.isEmpty) return;
+    List<Studio> studios;
+    try {
+      studios = await _api.allStudios();
+    } catch (e) {
+      if (mounted) showToast(context, '加载工作室失败：$e', error: true);
+      return;
+    }
+    if (!mounted) return;
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text('选择工作室', style: TextStyle(fontSize: 16)),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: studios.length,
+              itemBuilder: (_, i) => ListTile(
+                dense: true,
+                title: Text(studios[i].name),
+                onTap: () => Navigator.pop(context, studios[i].id),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _batchBusy = true);
+    var done = 0;
+    var failed = 0;
+    for (final id in _selected) {
+      try {
+        await _api.updateScene({'id': id, 'studio_id': picked});
+        done++;
+      } catch (_) {
+        failed++;
+      }
+    }
+    if (!mounted) return;
+    _finishBatch('已设置工作室 $done 个', failed);
+  }
+
+  /// 批量添加演员：把选中的演员追加到所有选中短片。
+  Future<void> _batchPerformers() async {
+    if (_selected.isEmpty) return;
+    List<Performer> performers;
+    try {
+      performers = await _api.allPerformers();
+    } catch (e) {
+      if (mounted) showToast(context, '加载演员失败：$e', error: true);
+      return;
+    }
+    if (!mounted) return;
+    final picks = await showModalBottomSheet<Set<String>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _NameMultiPickerSheet(
+        title: '选择要添加的演员',
+        names: {for (final p in performers) p.id: p.name},
+      ),
+    );
+    if (picks == null || picks.isEmpty || !mounted) return;
+    setState(() => _batchBusy = true);
+    var done = 0;
+    var failed = 0;
+    for (final s in _selectedScenes) {
+      try {
+        final cur = s.performers.map((p) => p.id).toSet();
+        final next = cur.union(picks);
+        await _api.updateScene({'id': s.id, 'performer_ids': next.toList()});
+        done++;
+      } catch (_) {
+        failed++;
+      }
+    }
+    if (!mounted) return;
+    _finishBatch('已添加演员 $done 个', failed);
+  }
+
   /// 排序方式弹窗（与 Stash 对齐，含方向切换）。
   Future<void> _openSortSheet() async {
     final picked = await showModalBottomSheet<String>(
@@ -691,6 +779,18 @@ class _SceneListPageState extends State<SceneListPage> {
           ),
           const SizedBox(width: 4),
           btn(
+            label: '工作室',
+            onPressed: has ? _batchStudio : null,
+            width: 56,
+          ),
+          const SizedBox(width: 4),
+          btn(
+            label: '演员',
+            onPressed: has ? _batchPerformers : null,
+            width: 56,
+          ),
+          const SizedBox(width: 4),
+          btn(
             label: '合并',
             onPressed: _selected.length >= 2 ? _batchMerge : null,
           ),
@@ -760,7 +860,7 @@ class _SceneListPageState extends State<SceneListPage> {
                     ].join(' · ');
                     return SceneListCard(
                       title: s.title,
-                      rawCover: s.paths.raw,
+                      rawCover: s.coverPath,
                       date: s.date,
                       rating100: s.rating100,
                       organized: s.organized,
@@ -852,6 +952,73 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
                       _picked.add(t.id);
                     } else {
                       _picked.remove(t.id);
+                    }
+                  }),
+                );
+              },
+            ),
+          ),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('取消'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+                onPressed: _picked.isEmpty
+                    ? null
+                    : () => Navigator.pop(context, _picked),
+                child: Text('确定（${_picked.length}）'),
+              ),
+            ),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+/// 通用 id->name 多选弹窗（演员批量添加用）。
+class _NameMultiPickerSheet extends StatefulWidget {
+  const _NameMultiPickerSheet({required this.title, required this.names});
+  final String title;
+  final Map<String, String> names;
+
+  @override
+  State<_NameMultiPickerSheet> createState() => _NameMultiPickerSheetState();
+}
+
+class _NameMultiPickerSheetState extends State<_NameMultiPickerSheet> {
+  final Set<String> _picked = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = widget.names.entries.toList();
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(widget.title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: entries.length,
+              itemBuilder: (_, i) {
+                final e = entries[i];
+                return CheckboxListTile(
+                  dense: true,
+                  value: _picked.contains(e.key),
+                  title: Text(e.value),
+                  onChanged: (v) => setState(() {
+                    if (v == true) {
+                      _picked.add(e.key);
+                    } else {
+                      _picked.remove(e.key);
                     }
                   }),
                 );

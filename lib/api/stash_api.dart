@@ -237,7 +237,13 @@ class StashApi {
     bool sprites = false,
     bool previews = false,
     bool imagePreviews = false,
+    bool markers = false,
+    bool markerImagePreviews = false,
+    bool markerScreenshots = false,
+    bool transcodes = false,
     bool phashes = false,
+    bool imagePhashes = false,
+    bool imageThumbnails = false,
     bool interactiveHeatmaps = false,
     bool clipPreviews = false,
     bool overwrite = false,
@@ -258,7 +264,13 @@ class StashApi {
     addBool('sprites', sprites);
     addBool('previews', previews);
     addBool('imagePreviews', imagePreviews);
+    addBool('markers', markers);
+    addBool('markerImagePreviews', markerImagePreviews);
+    addBool('markerScreenshots', markerScreenshots);
+    addBool('transcodes', transcodes);
     addBool('phashes', phashes);
+    addBool('imagePhashes', imagePhashes);
+    addBool('imageThumbnails', imageThumbnails);
     // 0.31+ 的 GenerateMetadataInput 字段名为 interactiveHeatmapsSpeeds，
     // 旧版 generate 才是 interactiveHeatmaps，按 mutation 名区分。
     addBool(
@@ -306,6 +318,78 @@ class StashApi {
     return 'metadataGenerate';
   }
 
+  /// 批量识别（Identify）：按 [sources] 顺序自动匹配短片元数据
+  /// （0.31+ mutation 为 metadataIdentify，兼容旧版 identify）。
+  /// [sources] 每项形如 {'scraper_id': id} 或 {'stash_box_endpoint': url}；
+  /// 顺序即优先级，第一个命中即采用。只把勾选的选项写入 input。
+  Future<void> identifyScenes({
+    required List<Map<String, dynamic>> sources,
+    bool setCoverImage = true,
+    bool setOrganized = true,
+    bool skipMultipleMatches = true,
+    bool skipSingleNamePerformers = true,
+    List<String>? sceneIDs,
+    List<String>? paths,
+  }) async {
+    final fields = await mutationFields();
+    final m =
+        fields.contains('metadataIdentify') ? 'metadataIdentify' : 'identify';
+    final vars = <String, dynamic>{};
+    final varDecls = <String>[];
+    final inputFields = <String>[];
+    void addBool(String name, bool v) {
+      if (v) {
+        vars[name] = true;
+        varDecls.add('\$$name: Boolean');
+        inputFields.add('$name: \$$name');
+      }
+    }
+
+    addBool('setCoverImage', setCoverImage);
+    addBool('setOrganized', setOrganized);
+    addBool('skipMultipleMatches', skipMultipleMatches);
+    addBool('skipSingleNamePerformers', skipSingleNamePerformers);
+    vars['sources'] = sources;
+    varDecls.add('\$sources: [IdentifySourceInput!]!');
+    inputFields.add('sources: \$sources');
+    if (sceneIDs != null && sceneIDs.isNotEmpty) {
+      vars['sceneIDs'] = sceneIDs;
+      varDecls.add('\$sceneIDs: [ID!]');
+      inputFields.add('sceneIDs: \$sceneIDs');
+    }
+    if (paths != null && paths.isNotEmpty) {
+      vars['paths'] = paths;
+      varDecls.add('\$paths: [String!]');
+      inputFields.add('paths: \$paths');
+    }
+    final head =
+        varDecls.isEmpty ? 'mutation' : 'mutation(${varDecls.join(', ')})';
+    final gq = '$head { $m(input: { ${inputFields.join(', ')} }) }';
+    await query(gq, vars, const Duration(seconds: 15));
+  }
+
+  /// 查找疑似重复短片：按 phash 距离（0~64，越小越严格）+ 时长差（秒）。
+  /// 返回重复分组列表，每组为内容相似的多个短片。
+  Future<List<List<Scene>>> findDuplicateScenes({
+    int distance = 16,
+    double durationDiff = 15,
+  }) async {
+    const gq = '''
+      query FindDuplicateScenes(\$distance: Int, \$duration_diff: Float) {
+        findDuplicateScenes(distance: \$distance, duration_diff: \$duration_diff) {
+          $_sceneCardFields
+        }
+      }''';
+    final d =
+        await query(gq, {'distance': distance, 'duration_diff': durationDiff});
+    final v = d?['findDuplicateScenes'];
+    if (v is! List) return const [];
+    return v
+        .map((g) =>
+            (g as List).where((e) => e != null).map(Scene.fromJson).toList())
+        .toList();
+  }
+
   /// 清理：删除孤儿媒体文件等（dryRun=true 只预览不实际删除）。
   /// mutation 名按服务器实际字段传入（0.31+ 为 metadataClean / metadataCleanGenerated，
   /// 旧版为 clean）。CleanInput.dryRun 为非空字段（Boolean!）。
@@ -319,19 +403,38 @@ class StashApi {
 
   /// 自动打标签。mutation 名按服务器实际字段传入
   /// （0.31+ 为 metadataAutoTag，旧版为 autoTag）。
+  ///
+  /// 注意两版 input 结构不同（曾因类型不匹配返回 422）：
+  /// - 0.31+ `AutoTagMetadataInput`：performers/studios/tags 为 `[String!]`，
+  ///   传 `["*"]` 表示对该类全部打标签，不传该字段表示跳过；
+  /// - 旧版 `AutoTagInput`：对应字段为 Boolean。
   Future<void> autoTag({
     required String mutation,
     bool performers = true,
     bool studios = true,
     bool tags = true,
   }) async {
-    await query(
-      'mutation(\$performers: Boolean, \$studios: Boolean, \$tags: Boolean) '
-      '{ $mutation(input: { performers: \$performers, studios: \$studios, '
-      'tags: \$tags }) }',
-      {'performers': performers, 'studios': studios, 'tags': tags},
-      const Duration(seconds: 15),
-    );
+    if (mutation == 'metadataAutoTag') {
+      // 0.31+：字段是 ID 数组，"*" 表示全部；未勾选的类不传该字段。
+      final inp = <String, dynamic>{};
+      if (performers) inp['performers'] = const ['*'];
+      if (studios) inp['studios'] = const ['*'];
+      if (tags) inp['tags'] = const ['*'];
+      await query(
+        'mutation(\$input: AutoTagMetadataInput!) { $mutation(input: \$input) }',
+        {'input': inp},
+        const Duration(seconds: 15),
+      );
+    } else {
+      // 旧版：字段是 Boolean。
+      await query(
+        'mutation(\$performers: Boolean, \$studios: Boolean, \$tags: Boolean) '
+        '{ $mutation(input: { performers: \$performers, studios: \$studios, '
+        'tags: \$tags }) }',
+        {'performers': performers, 'studios': studios, 'tags': tags},
+        const Duration(seconds: 15),
+      );
+    }
   }
 
   /// Stash 的媒体库路径（可扫描范围）：
@@ -432,6 +535,35 @@ class StashApi {
         const Duration(seconds: 15));
     final list = data?['jobQueue'];
     return list is List ? list : [];
+  }
+
+  /// 媒体库统计（StatsResultType）。字段全部必填，新版用 group_count，
+  /// 旧版回退 movie_count。
+  Future<Map<String, dynamic>> stats() async {
+    final d = await query(
+        'query { stats { scene_count scenes_size scenes_duration '
+        'image_count images_size gallery_count performer_count studio_count '
+        'group_count movie_count tag_count total_o_count total_play_duration '
+        'total_play_count scenes_played } }',
+        null,
+        const Duration(seconds: 20));
+    final s = d?['stats'];
+    return s is Map ? Map<String, dynamic>.from(s) : {};
+  }
+
+  /// 已安装插件列表（Plugin）。失败返回空列表。
+  Future<List<dynamic>> plugins() async {
+    try {
+      final d = await query(
+          'query { plugins { id name description url version enabled '
+          'tasks { name } hooks { name } settings { name display_name type } } }',
+          null,
+          const Duration(seconds: 15));
+      final list = d?['plugins'];
+      return list is List ? list : [];
+    } catch (_) {
+      return [];
+    }
   }
 
   // ---------- 分类全量（编辑表单用） ----------
@@ -1026,6 +1158,22 @@ class StashApi {
     final q =
         'mutation DestroyStudio(\$input: StudioDestroyInput!) { $m(input: \$input) }';
     await query(q, {'input': {'id': id}});
+  }
+
+  /// 删除短片（0.31+ mutation 名为 sceneDestroy，兼容旧版 destroyScene）。
+  /// [deleteFile] 是否同时删除磁盘文件；[deleteGenerated] 是否删除生成素材。
+  Future<void> destroyScene(
+    String id, {
+    bool deleteFile = false,
+    bool deleteGenerated = false,
+  }) async {
+    final fields = await mutationFields();
+    final m = fields.contains('sceneDestroy') ? 'sceneDestroy' : 'destroyScene';
+    final q = '''
+      mutation DestroyScene(\$id: ID!, \$delete_file: Boolean, \$delete_generated: Boolean) {
+        $m(input: { id: \$id, delete_file: \$delete_file, delete_generated: \$delete_generated })
+      }''';
+    await query(q, {'id': id, 'delete_file': deleteFile, 'delete_generated': deleteGenerated});
   }
 
   /// 短片合并（服务端原生 sceneMerge）。

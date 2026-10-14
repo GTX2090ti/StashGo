@@ -58,3 +58,6 @@ ohos/entry/.preview/
 ohos/entry/src/main/resources/rawfile/flutter_assets/
 ohos/.port_backup/
 .port_backup/
+ohos/node_modules/
+ohos/local.properties
+ohos/entry/src/main/ets/plugins/GeneratedPluginRegistrant.ets
