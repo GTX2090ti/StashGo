@@ -302,20 +302,34 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
   bool _showAllAliases = false;
   final _scroll = ScrollController();
 
-  /// 拆分别名字符串为列表（兼容逗号/顿号分隔）。
-  List<String> _aliasList(String raw) => raw
-      .split(RegExp('[,、]'))
-      .map((e) => e.trim())
-      .where((e) => e.isNotEmpty)
-      .toList();
-
   /// 别名预览：默认只显示前 5 个，太多就省略并标注总数。
   String _aliasPreview(String raw) {
-    final list = _aliasList(raw);
+    final list = raw
+        .split(RegExp('[,、]'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     if (list.isEmpty) return raw;
     const show = 5;
     if (list.length <= show) return list.join('、');
     return '${list.take(show).join('、')} 等 ${list.length} 个';
+  }
+
+  static int _filledCount(List<bool> filled) =>
+      filled.where((e) => e).length;
+
+  /// 组内无内容时整组不显示。
+  Widget _foldIf(String title, List<Widget> children, {String summary = ''}) {
+    if (children.isEmpty) return const SizedBox.shrink();
+    return FoldSection(title: title, summary: summary, children: children);
+  }
+
+  static String _fmtTime(String iso) {
+    final d = DateTime.tryParse(iso);
+    if (d == null) return iso;
+    final l = d.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${l.year}-${two(l.month)}-${two(l.day)} ${two(l.hour)}:${two(l.minute)}';
   }
 
   @override
@@ -513,60 +527,133 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
                               onPressed: _openScrape, child: const Text('削刮'))),
                     ]),
 
-                    const SectionTitle('基本信息'),
-                    if (p.aliases.isNotEmpty) ...[
-                      InfoRow(
-                          '别名',
-                          _showAllAliases
-                              ? _aliasList(p.aliases).join('、')
-                              : _aliasPreview(p.aliases)),
-                      if (_aliasList(p.aliases).length > 5)
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton(
-                            style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 0),
-                                minimumSize: const Size(0, 28)),
-                            onPressed: () => setState(
-                                () => _showAllAliases = !_showAllAliases),
-                            child: Text(
+                    FoldSection(
+                      title: '基本信息',
+                      open: true,
+                      children: [
+                        if (p.aliasParts.isNotEmpty) ...[
+                          InfoRow('别名',
                               _showAllAliases
-                                  ? '收起'
-                                  : '查看更多 ${_aliasList(p.aliases).length - 5} 个',
-                              style: const TextStyle(fontSize: 12),
+                                  ? p.aliasParts.join('、')
+                                  : _aliasPreview(p.aliases)),
+                          if (p.aliasParts.length > 5)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 0),
+                                    minimumSize: const Size(0, 28)),
+                                onPressed: () => setState(
+                                    () => _showAllAliases = !_showAllAliases),
+                                child: Text(
+                                  _showAllAliases
+                                      ? '收起'
+                                      : '查看更多 ${p.aliasParts.length - 5} 个',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                    ],
-                    if (p.birthdate.isNotEmpty) InfoRow('出生日期', p.birthdate),
-                    if (p.country.isNotEmpty) InfoRow('国家', p.country),
-                    if (p.ethnicity.isNotEmpty) InfoRow('族裔', p.ethnicity),
-                    if (p.measurements.isNotEmpty) InfoRow('三围', p.measurements),
-                    if (p.careerLength.isNotEmpty) InfoRow('从业年限', p.careerLength),
-                    if (p.rating100 > 0)
-                      InfoRow('评分', '${(p.rating100 / 20).toStringAsFixed(1)} / 5.0'),
+                        ],
+                        if (p.gender.isNotEmpty)
+                          InfoRow('性别', enumLabel(kGenderOptions, p.gender)),
+                        if (p.birthdate.isNotEmpty)
+                          InfoRow('出生日期', p.birthdate),
+                        if (p.ageText.isNotEmpty)
+                          InfoRow('年龄', p.ageText),
+                        if (p.deathDate.isNotEmpty)
+                          InfoRow('去世日期', p.deathDate),
+                        if (p.country.isNotEmpty) InfoRow('国家', p.country),
+                        if (p.ethnicity.isNotEmpty) InfoRow('族裔', p.ethnicity),
+                        if (p.rating100 > 0)
+                          InfoRow('评分',
+                              '${(p.rating100 / 20).toStringAsFixed(1)} / 5.0'),
+                        if (p.ignoreAutoTag) const InfoRow('自动打标', '已忽略'),
+                      ],
+                    ),
 
-                    if (p.tags.isNotEmpty) ...[
-                      SectionTitle('标签（${p.tags.length}）'),
-                      Wrap(children: [
-                        for (final t in p.tags)
-                          TapChip(
-                              label: t.name,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => TagDetailPage(tagId: t.id)),
-                              )),
-                      ]),
-                    ],
+                    _foldIf('身体数据', [
+                      if (p.heightCm > 0) InfoRow('身高', '${p.heightCm} cm'),
+                      if (p.weight > 0) InfoRow('体重', '${p.weight} kg'),
+                      if (p.measurements.isNotEmpty)
+                        InfoRow('三围', p.measurements),
+                      if (p.fakeTits.isNotEmpty) InfoRow('隆胸', p.fakeTits),
+                      if (p.penisLength > 0)
+                        InfoRow('阴茎长度', '${p.penisLength.toStringAsFixed(1)} cm'),
+                      if (p.circumcised.isNotEmpty)
+                        InfoRow('环切状态',
+                            enumLabel(kCircumcisedOptions, p.circumcised)),
+                      if (p.eyeColor.isNotEmpty) InfoRow('瞳色', p.eyeColor),
+                      if (p.hairColor.isNotEmpty) InfoRow('发色', p.hairColor),
+                    ], summary: '${_filledCount([
+                      p.heightCm > 0,
+                      p.weight > 0,
+                      p.measurements.isNotEmpty,
+                      p.fakeTits.isNotEmpty,
+                      p.penisLength > 0,
+                      p.circumcised.isNotEmpty,
+                      p.eyeColor.isNotEmpty,
+                      p.hairColor.isNotEmpty,
+                    ])} 项'),
 
-                    if (p.details.isNotEmpty) ...[
-                      const SectionTitle('简介'),
-                      Text(p.details,
-                          style: theme.textTheme.bodyMedium
-                              ?.copyWith(height: 1.6)),
-                    ],
+                    _foldIf('职业生涯', [
+                      if (p.careerText.isNotEmpty)
+                        InfoRow('从业年限', p.careerText),
+                      if (p.tattoos.isNotEmpty) InfoRow('纹身', p.tattoos),
+                      if (p.piercings.isNotEmpty) InfoRow('穿孔', p.piercings),
+                    ], summary: '${_filledCount([
+                      p.careerText.isNotEmpty,
+                      p.tattoos.isNotEmpty,
+                      p.piercings.isNotEmpty,
+                    ])} 项'),
+
+                    if (p.urls.isNotEmpty)
+                      FoldSection(
+                        title: '链接',
+                        summary: '${p.urls.length} 个',
+                        children: [
+                          for (final u in p.urls)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: SelectableText(u,
+                                  style: theme.textTheme.bodySmall),
+                            ),
+                        ],
+                      ),
+
+                    if (p.tags.isNotEmpty)
+                      FoldSection(
+                        title: '标签',
+                        summary: '${p.tags.length} 个',
+                        children: [
+                          Wrap(children: [
+                            for (final t in p.tags)
+                              TapChip(
+                                  label: t.name,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            TagDetailPage(tagId: t.id)),
+                                  )),
+                          ]),
+                        ],
+                      ),
+
+                    _foldIf('档案', [
+                      if (p.details.isNotEmpty)
+                        Text(p.details,
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(height: 1.6)),
+                      InfoRow('短片', '${p.sceneCount}'),
+                      if (p.imageCount > 0) InfoRow('图片', '${p.imageCount}'),
+                      if (p.galleryCount > 0)
+                        InfoRow('相册', '${p.galleryCount}'),
+                      if (p.groupCount > 0) InfoRow('合集', '${p.groupCount}'),
+                      if (p.oCounter > 0) InfoRow('O 计数', '${p.oCounter}'),
+                      if (p.updatedAt.isNotEmpty)
+                        InfoRow('更新时间', _fmtTime(p.updatedAt)),
+                    ], summary: p.details.isEmpty ? '统计' : '简介 + 统计'),
 
                     RelatedScenes(
                       scrollController: _scroll,
