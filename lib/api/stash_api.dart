@@ -656,6 +656,246 @@ class StashApi {
     return arr.map((e) => StashBoxInfo.fromJson(e)).toList();
   }
 
+  // ---------- 削刮器包（Stash 包系统） ----------
+
+  /// 包对象想要字段：0.31 的 `Package` 只有前四个 + requires，
+  /// 更早版本的 InstalledPackage/AvailablePackage 另有 author/synopsis/url。
+  static const _pkgWantFields = <String>[
+    'package_id', 'name', 'version', 'date', 'sourceURL', 'requires',
+    'author', 'synopsis', 'url'
+  ];
+  static const _pkgMinFields = [
+    'package_id', 'name', 'version', 'sourceURL'
+  ];
+
+  /// 包类型名的探测顺序（0.31 起合并为 Package）。
+  static const _pkgInstalledTypes = ['Package', 'InstalledPackage'];
+  static const _pkgAvailableTypes = ['Package', 'AvailablePackage'];
+
+  static final Map<String, Map<String, String>> _pkgFieldCache = {};
+  static String? _pkgTypeScraper;
+
+  /// 对象类型的字段名 -> 「种类:类型名」（如 SCALAR:String、OBJECT:Package）。
+  /// introspection 不可用时返回空 Map。
+  Future<Map<String, String>> _typeFields(String typeName) async {
+    final cached = _pkgFieldCache[typeName];
+    if (cached != null) return cached;
+    final out = <String, String>{};
+    try {
+      final d = await query('query { __type(name: "$typeName") { fields { '
+          'name type { kind name ofType { kind name ofType { kind name } } } } } }');
+      final fs = d?['__type']?['fields'];
+      if (fs is List) {
+        for (final e in fs.whereType<Map>()) {
+          final n = e['name']?.toString() ?? '';
+          if (n.isNotEmpty) out[n] = _unwrapType(e['type']);
+        }
+      }
+    } catch (_) {}
+    _pkgFieldCache[typeName] = out;
+    return out;
+  }
+
+  /// 逐层剥开 NON_NULL / LIST 包装，取最终的「种类:类型名」。
+  static String _unwrapType(dynamic t) {
+    var cur = t;
+    for (var i = 0; i < 4 && cur is Map; i++) {
+      final name = cur['name']?.toString() ?? '';
+      if (name.isNotEmpty) {
+        return '${cur['kind']?.toString() ?? ''}:$name';
+      }
+      cur = cur['ofType'];
+    }
+    return '';
+  }
+
+  /// PackageType 枚举里代表「削刮器」的那个值。0.31 是 `Scraper`（首字母大写），
+  /// 其它版本见过 SCRAPER / SCRAPERS，传错整条查询直接报错。
+  Future<String> packageTypeScraper() async {
+    final cached = _pkgTypeScraper;
+    if (cached != null) return cached;
+    var out = 'Scraper';
+    try {
+      final d = await query(
+          'query { __type(name: "PackageType") { enumValues { name } } }');
+      final vs = d?['__type']?['enumValues'];
+      if (vs is List) {
+        final names = vs
+            .map((e) => e is Map ? e['name']?.toString() ?? '' : '')
+            .where((s) => s.isNotEmpty)
+            .toList();
+        for (final n in names) {
+          if (n.toLowerCase() == 'scraper') {
+            out = n;
+            break;
+          }
+        }
+        if (out == 'Scraper') {
+          for (final n in names) {
+            if (n.toLowerCase().startsWith('scraper')) {
+              out = n;
+              break;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    _pkgTypeScraper = out;
+    return out;
+  }
+
+  /// 按服务器实际字段拼包列表的选择集。requires 在 0.31 是 `[Package!]!`
+  /// （更早版本是字符串数组），必须按类型种类决定是否下钻。
+  Future<String> _pkgSelection(List<String> candidates) async {
+    for (final typeName in candidates) {
+      final have = await _typeFields(typeName);
+      if (have.isEmpty) continue;
+      final parts = <String>[];
+      for (final f in _pkgWantFields) {
+        final ty = have[f];
+        if (ty == null || ty.isEmpty) continue;
+        if (!ty.startsWith('OBJECT:')) {
+          parts.add(f);
+          continue;
+        }
+        final sub = await _typeFields(ty.split(':').last);
+        final subFields = <String>[
+          'package_id',
+          'name',
+          'version'
+        ].where((n) => sub.containsKey(n)).toList();
+        if (subFields.isNotEmpty) {
+          parts.add('$f { ${subFields.join(' ')} }');
+        }
+      }
+      if (parts.isNotEmpty) return parts.join(' ');
+    }
+    return _pkgMinFields.join(' ');
+  }
+
+  /// 服务端已配置的削刮器包源（名称 / 索引 URL / 本地目录）。
+  /// 老版本没有该字段时返回空列表。
+  Future<List<PackageSource>> scraperPackageSources() async {
+    try {
+      final d = await query('query { configuration { general '
+          '{ scraperPackageSources { name url local_path } } } }');
+      final arr = d?['configuration']?['general']?['scraperPackageSources'];
+      if (arr is! List) return const [];
+      return arr.map((e) => PackageSource.fromJson(e)).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// 服务器上已安装的削刮器包。
+  Future<List<ScraperPkg>> installedPackages() async {
+    final sel = await _pkgSelection(_pkgInstalledTypes);
+    final type = await packageTypeScraper();
+    final d = await query(
+        'query InstalledPkgs(\$t: PackageType!) '
+        '{ installedPackages(type: \$t) { $sel } }',
+        {'t': type},
+        const Duration(seconds: 20));
+    final list = d?['installedPackages'];
+    if (list is! List) return const [];
+    return list.map((e) => ScraperPkg.fromJson(e)).toList();
+  }
+
+  /// 某个索引源上可安装的包。[source] 必须是完整 index.yml URL ——
+  /// 传源配置里的 local_path 会让服务器报 `unsupported protocol scheme`。
+  Future<List<ScraperPkg>> availablePackages(String source) async {
+    final sel = await _pkgSelection(_pkgAvailableTypes);
+    final type = await packageTypeScraper();
+    final d = await query(
+        'query AvailablePkgs(\$t: PackageType!, \$s: String!) '
+        '{ availablePackages(type: \$t, source: \$s) { $sel } }',
+        {'t': type, 's': source.trim()},
+        const Duration(seconds: 60));
+    final list = d?['availablePackages'];
+    if (list is! List) return const [];
+    return list.map((e) => ScraperPkg.fromJson(e)).toList();
+  }
+
+  /// 安装（或重装以更新）削刮器包，返回后台任务 id（可能为空）。
+  /// 注意 specs 为空是「什么都不装」，不是「装全部」。
+  Future<String> installPackages(
+      List<Map<String, String>> specs) async {
+    if (specs.isEmpty) return '';
+    final fields = await mutationFields();
+    if (!fields.contains('installPackages')) {
+      throw ApiException('当前 Stash 版本不支持安装削刮器包');
+    }
+    final inp = await inputFields('PackageSpecInput');
+    final key = inp.contains('source_url')
+        ? 'source_url'
+        : (inp.contains('sourceURL') || inp.isEmpty)
+            ? 'sourceURL'
+            : '';
+    final type = await packageTypeScraper();
+    final vars = specs
+        .map((e) => <String, String>{
+              'id': e['id'] ?? '',
+              if (key.isNotEmpty && (e['source'] ?? '').isNotEmpty)
+                key: e['source']!,
+            })
+        .where((e) => (e['id'] ?? '').isNotEmpty)
+        .toList();
+    if (vars.isEmpty) return '';
+    final d = await query(
+        'mutation InstallPkgs(\$t: PackageType!, \$p: [PackageSpecInput!]!) '
+        '{ installPackages(type: \$t, packages: \$p) }',
+        {'t': type, 'p': vars},
+        const Duration(seconds: 30));
+    final v = d?['installPackages'];
+    return v is String ? v : '';
+  }
+
+  /// 让服务器重新加载削刮器：装完包不必重启容器，新刮削器即进缓存。
+  Future<void> reloadScrapers() async {
+    final fields = await mutationFields();
+    if (!fields.contains('reloadScrapers')) {
+      throw ApiException('当前 Stash 版本不支持重新加载削刮器');
+    }
+    await query('mutation { reloadScrapers }', null,
+        const Duration(seconds: 30));
+  }
+
+  /// 按 id 找后台任务；队列里查不到该 id 视为已结束（返回 null）。
+  /// 老版本 jobQueue 无 progress/error 字段，整条查询失败时退回精简字段。
+  Future<Map<String, dynamic>?> findJob(String id) async {
+    if (id.isEmpty) return null;
+    List<dynamic> list;
+    try {
+      list = await _jobQueueFull();
+    } catch (_) {
+      list = await _jobQueueLite();
+    }
+    for (final e in list.whereType<Map>()) {
+      if (e['id']?.toString() == id) return Map<String, dynamic>.from(e);
+    }
+    return null;
+  }
+
+  Future<List<dynamic>> _jobQueueFull() async {
+    final data = await query(
+        'query { jobQueue { id status progress description error } }',
+        null,
+        const Duration(seconds: 15));
+    final list = data?['jobQueue'];
+    return list is List ? list : [];
+  }
+
+  Future<List<dynamic>> _jobQueueLite() async {
+    try {
+      final data = await query('query { jobQueue { id status description } }',
+          null, const Duration(seconds: 15));
+      final list = data?['jobQueue'];
+      return list is List ? list : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
   // ---------- 短片查询 ----------
 
   static const _sceneCardFields = '''

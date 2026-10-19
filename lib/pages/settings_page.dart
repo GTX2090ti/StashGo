@@ -11,6 +11,7 @@ import 'duplicate_page.dart';
 import 'tags_page.dart';
 import 'stats_page.dart';
 import 'plugins_page.dart';
+import 'scraper_packages_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, this.embedded = false});
@@ -227,6 +228,17 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.download_outlined),
+          title: const Text('削刮器包'),
+          subtitle: const Text('查看已安装削刮器包，从索引源搜索并安装'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ScraperPackagesPage()),
+          ),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.network_check),
           title: const Text('网络诊断'),
           trailing: const Icon(Icons.chevron_right),
@@ -249,7 +261,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 24),
         Text('关于', style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
-        Text('StashScrubber Flutter 1.6.87', style: theme.textTheme.bodySmall),
+        Text('StashScrubber Flutter 1.6.88', style: theme.textTheme.bodySmall),
         if (!_cfg.storageAvailable)
           Padding(
             padding: const EdgeInsets.only(top: 8),
