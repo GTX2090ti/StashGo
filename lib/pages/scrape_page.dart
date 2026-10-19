@@ -461,6 +461,10 @@ class _ScrapePageState extends State<ScrapePage> {
         Text('空字段不会写入，库内不存在的演员/标签/工作室将自动创建。',
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        if (!_isStudio)
+          Text('标签与本地已有标签取并集，不会覆盖已保存的标签。',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         if (_applyMsg.isNotEmpty) ...[
           const SizedBox(height: 12),
           Text(
