@@ -387,13 +387,11 @@ class _SceneListPageState extends State<SceneListPage> {
       if (mounted) setState(() => _allTags = const []);
     }
     if (!mounted) return;
-    final picks = await showModalBottomSheet<Set<String>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _TagPickerSheet(
-        title: add ? '选择要添加的标签' : '选择要移除的标签',
-        tags: _allTags,
-      ),
+    final picks = await showMultiSelectSheet(
+      context,
+      title: add ? '选择要添加的标签' : '选择要移除的标签',
+      options: [for (final t in _allTags) (t.id, t.name)],
+      selected: const <String>{},
     );
     if (picks != null && picks.isNotEmpty) {
       await _batchTags(picks, add);
@@ -419,29 +417,10 @@ class _SceneListPageState extends State<SceneListPage> {
       return;
     }
     if (!mounted) return;
-    final picked = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text('选择工作室', style: TextStyle(fontSize: 16)),
-          ),
-          const Divider(height: 1),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: studios.length,
-              itemBuilder: (_, i) => ListTile(
-                dense: true,
-                title: Text(studios[i].name),
-                onTap: () => Navigator.pop(context, studios[i].id),
-              ),
-            ),
-          ),
-        ]),
-      ),
+    final picked = await showSingleSelectSheet(
+      context,
+      title: '选择工作室',
+      options: [for (final s in studios) (s.id, s.name)],
     );
     if (picked == null || !mounted) return;
     setState(() => _batchBusy = true);
@@ -470,13 +449,11 @@ class _SceneListPageState extends State<SceneListPage> {
       return;
     }
     if (!mounted) return;
-    final picks = await showModalBottomSheet<Set<String>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _NameMultiPickerSheet(
-        title: '选择要添加的演员',
-        names: {for (final p in performers) p.id: p.name},
-      ),
+    final picks = await showMultiSelectSheet(
+      context,
+      title: '选择要添加的演员',
+      options: [for (final p in performers) (p.id, p.name)],
+      selected: const <String>{},
     );
     if (picks == null || picks.isEmpty || !mounted) return;
     setState(() => _batchBusy = true);
@@ -912,138 +889,6 @@ class _SceneListPageState extends State<SceneListPage> {
               ? '${widget.onlyOrganized ? '收藏' : '短片'} ($_total)'
               : widget.onlyOrganized ? '收藏' : '短片')),
       body: body,
-    );
-  }
-}
-
-class _TagPickerSheet extends StatefulWidget {
-  const _TagPickerSheet({required this.title, required this.tags});
-  final String title;
-  final List<Tag> tags;
-
-  @override
-  State<_TagPickerSheet> createState() => _TagPickerSheetState();
-}
-
-class _TagPickerSheetState extends State<_TagPickerSheet> {
-  final Set<String> _picked = {};
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(widget.title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: widget.tags.length,
-              itemBuilder: (_, i) {
-                final t = widget.tags[i];
-                return CheckboxListTile(
-                  dense: true,
-                  value: _picked.contains(t.id),
-                  title: Text(t.name),
-                  onChanged: (v) => setState(() {
-                    if (v == true) {
-                      _picked.add(t.id);
-                    } else {
-                      _picked.remove(t.id);
-                    }
-                  }),
-                );
-              },
-            ),
-          ),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FilledButton(
-                onPressed: _picked.isEmpty
-                    ? null
-                    : () => Navigator.pop(context, _picked),
-                child: Text('确定（${_picked.length}）'),
-              ),
-            ),
-          ]),
-        ],
-      ),
-    );
-  }
-}
-
-/// 通用 id->name 多选弹窗（演员批量添加用）。
-class _NameMultiPickerSheet extends StatefulWidget {
-  const _NameMultiPickerSheet({required this.title, required this.names});
-  final String title;
-  final Map<String, String> names;
-
-  @override
-  State<_NameMultiPickerSheet> createState() => _NameMultiPickerSheetState();
-}
-
-class _NameMultiPickerSheetState extends State<_NameMultiPickerSheet> {
-  final Set<String> _picked = {};
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = widget.names.entries.toList();
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(widget.title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: entries.length,
-              itemBuilder: (_, i) {
-                final e = entries[i];
-                return CheckboxListTile(
-                  dense: true,
-                  value: _picked.contains(e.key),
-                  title: Text(e.value),
-                  onChanged: (v) => setState(() {
-                    if (v == true) {
-                      _picked.add(e.key);
-                    } else {
-                      _picked.remove(e.key);
-                    }
-                  }),
-                );
-              },
-            ),
-          ),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FilledButton(
-                onPressed: _picked.isEmpty
-                    ? null
-                    : () => Navigator.pop(context, _picked),
-                child: Text('确定（${_picked.length}）'),
-              ),
-            ),
-          ]),
-        ],
-      ),
     );
   }
 }
