@@ -1275,6 +1275,7 @@ class StashApi {
   /// 写回削刮结果：仅写非空字段；库内不存在自动创建；可选图片。
   /// 写回短片削刮结果。[keepOriginalStudio] 为 true 时若本地已有工作室则保留
   /// 原工作室（与演员"默认保留原名"同理），不覆盖 studio_id。
+  /// 标签一律取并集：本地已保存的 tag_ids 不会被削刮结果覆盖。
   Future<int> applyScrapedScene(
       ScrapedScene s, String targetId, bool includeImage,
       {bool keepOriginalStudio = true}) async {
@@ -1292,16 +1293,17 @@ class StashApi {
       input['date'] = s.date;
       changed++;
     }
-    if (s.studio != null) {
-      var writeStudio = true;
-      if (keepOriginalStudio) {
-        try {
-          final cur = await findScene(targetId);
-          if (cur?.studio != null) writeStudio = false;
-        } catch (_) {
-          // 查询失败时按原逻辑写入，不阻塞削刮
-        }
+    // 本地现状：工作室保留判断与标签并入都依赖它
+    Scene? cur;
+    if (s.studio != null || s.tags.isNotEmpty) {
+      try {
+        cur = await findScene(targetId);
+      } catch (_) {
+        // 查询失败时按原逻辑写入，不阻塞削刮
       }
+    }
+    if (s.studio != null) {
+      final writeStudio = !(keepOriginalStudio && cur?.studio != null);
       if (writeStudio) {
         input['studio_id'] = await _resolveStudioId(s.studio!);
         changed++;
@@ -1318,12 +1320,15 @@ class StashApi {
       }
     }
     if (s.tags.isNotEmpty) {
-      final ids = <String>[];
+      final ids = <String>{};
+      if (cur != null) {
+        ids.addAll(cur.tags.map((t) => t.id));
+      }
       for (final t in s.tags) {
         ids.add(await _resolveTagId(t));
       }
       if (ids.isNotEmpty) {
-        input['tag_ids'] = ids;
+        input['tag_ids'] = ids.toList();
         changed++;
       }
     }
@@ -1343,6 +1348,7 @@ class StashApi {
   }
 
   /// 写回演员削刮结果（全部字段）。
+  /// 标签一律取并集：本地已保存的 tag_ids 不会被削刮结果覆盖。
   Future<int> applyScrapedPerformer(
       ScrapedPerformer p, String targetId, bool includeImage,
       {bool keepOriginalName = true, bool writeName = true}) async {
@@ -1355,6 +1361,14 @@ class StashApi {
       }
     }
 
+    // 本地现状：名字保留判断与标签并入都依赖它
+    Performer? local;
+    if ((writeName && keepOriginalName) || p.tags.isNotEmpty) {
+      try {
+        local = await findPerformer(targetId);
+      } catch (_) {}
+    }
+
     // writeName=false 用于名字与库中已有演员冲突时跳过名字字段
     // （performers.name 有 UNIQUE 约束，直接写会失败）。
     if (writeName) {
@@ -1362,11 +1376,8 @@ class StashApi {
       // 仅当本地无名字（如新演员）时才用刮削结果的名字。
       var nameToWrite = p.name;
       if (keepOriginalName) {
-        try {
-          final local = await findPerformer(targetId);
-          final localName = local?.name.trim() ?? '';
-          if (localName.isNotEmpty) nameToWrite = localName;
-        } catch (_) {}
+        final localName = local?.name.trim() ?? '';
+        if (localName.isNotEmpty) nameToWrite = localName;
       }
       put('name', nameToWrite);
     }
@@ -1418,12 +1429,15 @@ class StashApi {
       changed++;
     }
     if (p.tags.isNotEmpty) {
-      final ids = <String>[];
+      final ids = <String>{};
+      if (local != null) {
+        ids.addAll(local.tags.map((t) => t.id));
+      }
       for (final t in p.tags) {
         ids.add(await _resolveTagId(t));
       }
       if (ids.isNotEmpty) {
-        input['tag_ids'] = ids;
+        input['tag_ids'] = ids.toList();
         changed++;
       }
     }
