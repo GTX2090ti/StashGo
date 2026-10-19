@@ -713,3 +713,67 @@ class SceneFilterState {
     return j;
   }
 }
+
+/// 削刮器包：Stash 包系统的 InstalledPackage 与 AvailablePackage 形状基本一致，
+/// 共用一个模型。[sourceUrl] 是安装时要回传给 installPackages 的索引地址。
+class ScraperPkg {
+  final String id;
+  final String name;
+  final String version;
+  final String date;
+  final String author;
+  final String synopsis;
+  final String url;
+  final String sourceUrl;
+  final List<String> requires;
+
+  const ScraperPkg({
+    this.id = '',
+    this.name = '',
+    this.version = '',
+    this.date = '',
+    this.author = '',
+    this.synopsis = '',
+    this.url = '',
+    this.sourceUrl = '',
+    this.requires = const [],
+  });
+
+  /// 列表展示名：没有 name 时退回包 id。
+  String get display => name.isNotEmpty ? name : id;
+
+  factory ScraperPkg.fromJson(dynamic j) {
+    // 依赖项在部分版本里只有 name（值就是包 id），故两者互为回退。
+    final pid = _s(j?['package_id']);
+    final nm = _s(j?['name']);
+    return ScraperPkg(
+      id: pid.isNotEmpty ? pid : nm,
+      name: nm,
+      version: _s(j?['version']),
+      date: _s(j?['date']),
+      author: _s(j?['author']),
+      synopsis: _s(j?['synopsis']),
+      url: _s(j?['url']),
+      sourceUrl: _s(j?['sourceURL']),
+      requires: _ml(j?['requires'])
+          .map((e) => _s(e['name']).isNotEmpty ? _s(e['name']) : _s(e['package_id']))
+          .where((e) => e.isNotEmpty)
+          .toList(),
+    );
+  }
+}
+
+/// 服务端配置的削刮器包源（Settings → Metadata Providers → Scraper packages）。
+class PackageSource {
+  final String name;
+  final String url;
+  final String localPath;
+
+  const PackageSource({this.name = '', this.url = '', this.localPath = ''});
+
+  factory PackageSource.fromJson(dynamic j) => PackageSource(
+        name: _s(j?['name']),
+        url: _s(j?['url']),
+        localPath: _s(j?['local_path']),
+      );
+}
