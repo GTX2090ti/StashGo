@@ -14,7 +14,7 @@ A native HarmonyOS NEXT client (Flutter) for the [Stash](https://github.com/stas
 - Combined search: title / path / details + performer name + tag + studio
 - Sort: date added / date modified / title / file size / duration / rating / studio, etc. (0.31.1 enums)
 - Filters: rating / date / duration / organized / studio / performer / tag (multi-select + search)
-- Batch actions: favorite, rating, tags, **merge**, **generate covers**, **set studio**, **add performers**, select all
+- Batch actions: favorite, rating, tags, **merge**, **generate covers**, **set studio**, **add performers**, select all — the studio / performer / tag pickers all have a search box
 - Detail page: cover (manual cover takes priority, shown complete without cropping), info, links to performers / studio / tags, edit, scrape, generate cover, favorite
 - **File section**: full path on its own line with size / duration / modified time; multi-file blocks; set default file
 
@@ -79,6 +79,7 @@ cd ohos && hvigorw assembleHap -p product=default -p buildMode=release   # build
 
 ## Changelog
 
+- **v1.6.86**: The studio, performer and tag pickers inside the scene multi-select batch bar now share one searchable selection sheet (filter long lists directly, multi-select with a clear button), replacing the three duplicated search-less sheets; the about-page version label follows the build version
 - **v1.6.85**: Performer records now cover every Stash 0.31.1 field (alias list, gender, birth / death date, height, weight, measurements, fake tits, penis length, circumcision, eye and hair colour, career start / end, tattoos, piercings, URLs, ignore auto-tagging, tags, rating, favourite); edit and add share one grouped, collapsible form whose collapsed headers show how many fields are filled; saving submits only changed fields, and a field you clear is really cleared server-side; the performer detail page uses the same collapsible groups and adds an age derived from the birth date (shown as age at death when a death date exists); performer queries trim themselves against server introspection, so an older Stash missing a field no longer fails the whole query
 - **v1.6.84**: Batch identify page (auto-match metadata from multiple scraper sources by priority); duplicates page (find by phash distance + duration diff, merge); stats page (library-wide totals); plugins page (list / enabled state / task & hook counts); new batch actions "set studio" and "add performers" (performers appended, not replaced); full generate options (markers / marker screenshots / transcodes / image phashes / image thumbnails / clip previews); fix auto-tag 422 (field type now `[String!]`); manual cover takes priority and detail covers show complete without cropping; portrait performer / studio cards (3 columns on phones)
 - **v1.6.70**: Synced all iOS features: safe mode (blurred thumbnails), favorites page, infinite scroll; biometric lock (face first, fingerprint fallback, via a custom local_auth_ohos fork)
