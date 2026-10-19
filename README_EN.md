@@ -1,6 +1,6 @@
 # StashScrubber (iOS)
 
-An **iOS client (Flutter)** for the [Stash](https://github.com/stashapp/stash) media manager, compatible with **Stash 0.31.x**. Ported from the HarmonyOS Flutter version (StashScrubber-Harmony), feature-synced to v1.6.87.
+An **iOS client (Flutter)** for the [Stash](https://github.com/stashapp/stash) media manager, compatible with **Stash 0.31.x**. Ported from the HarmonyOS Flutter version (StashScrubber-Harmony), feature-synced to v1.6.88.
 
 > The original SwiftUI native iOS app (v1.6.0) is archived on branch `backup/native-ios-1.6.0`.
 
@@ -29,6 +29,7 @@ An **iOS client (Flutter)** for the [Stash](https://github.com/stashapp/stash) m
 - **Duplicates**: finds repeated scenes by perceptual-hash distance + duration delta, multi-select to merge
 - **Stats page**: library totals for scenes / images / performers / studios / tags
 - **Plugins page**: installed plugins with enabled state and task / hook counts
+- **Scraper packages page**: installed packages, browse a package index with search and multi-select install, `requires` dependencies pulled in automatically, install-job progress, scrapers reloaded when it finishes
 
 ### Studios
 - Grid cards + infinite scroll + search; detail shows **parent / child studios** (navigable), **favorite star**, delete
