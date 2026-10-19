@@ -45,6 +45,7 @@ A native HarmonyOS NEXT client (Flutter) for the [Stash](https://github.com/stas
 ### Stats · Plugins
 - Stats page: library-wide totals (scenes / images / performers / studios / tags, etc.)
 - Plugins page: installed plugins, enabled state, task / hook counts
+- Scraper packages page: installed list, browse and multi-select install from a package index, dependency auto-completion, install-job progress, scrapers reloaded when it finishes
 
 ### Search & Input
 - **Clear button** on every search bar (scenes / performers / studios / tags / filters / merge / jobs / scrape)
@@ -80,6 +81,7 @@ cd ohos && hvigorw assembleHap -p product=default -p buildMode=release   # build
 
 ## Changelog
 
+- **v1.6.88**: New "Scraper packages" page (Settings → below Plugins): lists the scraper packages installed on the server and loads the ones available from a package index (the source configured on the server by default, falling back to the community index), with search over long lists and multi-select install; selections automatically pull in `requires` dependencies such as `py_common`, which the server does not install for you; installation is an async background job, so the page polls it by job id and shows progress, then reloads scrapers on completion — no container restart needed. Package fields, the `PackageType` enum spelling and the `PackageSpecInput` key names are all trimmed from server introspection, so older Stash versions missing a field no longer break the whole query
 - **v1.6.87**: Scraped results no longer clobber saved tags — applying a scrape to a scene or performer unions the scraped tags with the ones already stored (the server treats `tag_ids` as a full replacement, so the merge happens client-side), and the scrape preview says so; the existing "keep current studio" and "keep performer name" behaviours are unchanged
 - **v1.6.86**: The studio, performer and tag pickers inside the scene multi-select batch bar now share one searchable selection sheet (filter long lists directly, multi-select with a clear button), replacing the three duplicated search-less sheets; the about-page version label follows the build version
 - **v1.6.85**: Performer records now cover every Stash 0.31.1 field (alias list, gender, birth / death date, height, weight, measurements, fake tits, penis length, circumcision, eye and hair colour, career start / end, tattoos, piercings, URLs, ignore auto-tagging, tags, rating, favourite); edit and add share one grouped, collapsible form whose collapsed headers show how many fields are filled; saving submits only changed fields, and a field you clear is really cleared server-side; the performer detail page uses the same collapsible groups and adds an age derived from the birth date (shown as age at death when a death date exists); performer queries trim themselves against server introspection, so an older Stash missing a field no longer fails the whole query
