@@ -30,6 +30,7 @@ A native HarmonyOS NEXT client (Flutter) for the [Stash](https://github.com/stas
 - Sources: local scrapers + **Stash-box** (StashDB etc.); fragment mode auto-queries box using the local performer name
 - Preview: name / aliases / birthdate / country / measurements / career / tags + image, "Apply & write back" on top
 - Keeps the original performer name by default; write-back compatible with 0.31.1 (`height_cm` / `alias_list` / `performer_input`)
+- **Tags and studios are never overwritten**: write-back unions the scraped tags with the ones already stored (the server treats `tag_ids` as a full replacement, so the merge happens client-side), and keeps the current studio when one is already set
 - **Friendly Chinese error messages** (404 / timeout / not implemented / site fetch failure)
 - **Name-clash protection on write-back**: if another performer already has the same name, the name field is skipped and the rest are saved
 
@@ -79,6 +80,7 @@ cd ohos && hvigorw assembleHap -p product=default -p buildMode=release   # build
 
 ## Changelog
 
+- **v1.6.87**: Scraped results no longer clobber saved tags — applying a scrape to a scene or performer unions the scraped tags with the ones already stored (the server treats `tag_ids` as a full replacement, so the merge happens client-side), and the scrape preview says so; the existing "keep current studio" and "keep performer name" behaviours are unchanged
 - **v1.6.86**: The studio, performer and tag pickers inside the scene multi-select batch bar now share one searchable selection sheet (filter long lists directly, multi-select with a clear button), replacing the three duplicated search-less sheets; the about-page version label follows the build version
 - **v1.6.85**: Performer records now cover every Stash 0.31.1 field (alias list, gender, birth / death date, height, weight, measurements, fake tits, penis length, circumcision, eye and hair colour, career start / end, tattoos, piercings, URLs, ignore auto-tagging, tags, rating, favourite); edit and add share one grouped, collapsible form whose collapsed headers show how many fields are filled; saving submits only changed fields, and a field you clear is really cleared server-side; the performer detail page uses the same collapsible groups and adds an age derived from the birth date (shown as age at death when a death date exists); performer queries trim themselves against server introspection, so an older Stash missing a field no longer fails the whole query
 - **v1.6.84**: Batch identify page (auto-match metadata from multiple scraper sources by priority); duplicates page (find by phash distance + duration diff, merge); stats page (library-wide totals); plugins page (list / enabled state / task & hook counts); new batch actions "set studio" and "add performers" (performers appended, not replaced); full generate options (markers / marker screenshots / transcodes / image phashes / image thumbnails / clip previews); fix auto-tag 422 (field type now `[String!]`); manual cover takes priority and detail covers show complete without cropping; portrait performer / studio cards (3 columns on phones)
