@@ -226,13 +226,26 @@ class Performer {
     final b = DateTime.tryParse(birthdate);
     if (b == null) return '';
     final end = DateTime.tryParse(deathDate) ?? DateTime.now();
-    var age = end.year - b.year;
-    if (end.month < b.month ||
-        (end.month == b.month && end.day < b.day)) {
-      age--;
-    }
+    final age = _yearsBetween(b, end);
     if (age < 0) return '';
     return deathDate.isNotEmpty ? '$age 岁（去世时）' : '$age 岁';
+  }
+
+  /// 拍摄时年龄：按短片拍摄日期 [sceneDate] 推算；缺出生日期或拍摄日期则返回空。
+  String ageAt(String sceneDate) {
+    final b = DateTime.tryParse(birthdate);
+    final d = DateTime.tryParse(sceneDate);
+    if (b == null || d == null) return '';
+    final age = _yearsBetween(b, d);
+    return age < 0 ? '' : '$age 岁';
+  }
+
+  static int _yearsBetween(DateTime from, DateTime to) {
+    var n = to.year - from.year;
+    if (to.month < from.month || (to.month == from.month && to.day < from.day)) {
+      n--;
+    }
+    return n;
   }
 
   static List<Performer> listFrom(dynamic v) =>
@@ -363,6 +376,16 @@ class Scene {
       _ml(v).map(Scene.fromJson).toList();
 
   String get displayTitle => title.isNotEmpty ? title : '（无标题）';
+
+  /// 第一个文件的主文件名（去目录、去扩展名）。清除削刮后用它回填标题。
+  String get fileBaseName {
+    if (files.isEmpty) return '';
+    final p = files.first.path;
+    final sep = p.lastIndexOf(RegExp(r'[/\\]'));
+    final name = sep < 0 ? p : p.substring(sep + 1);
+    final dot = name.lastIndexOf('.');
+    return dot > 0 ? name.substring(0, dot) : name;
+  }
 
   /// 优先用用户手动设置的封面（cover），否则回退到视频自动截图 paths.raw。
   String get coverPath => cover.isNotEmpty ? cover : paths.raw;
