@@ -456,12 +456,24 @@ class _SceneListPageState extends State<SceneListPage> {
       options: [for (final s in studios) (s.id, s.name)],
     );
     if (picked == null || !mounted || _batchBusy) return;
+    // 已有工作室的直接跳过，只给没设置的写，避免整批空转。
+    final targets =
+        _selectedScenes.where((s) => s.studio == null).map((s) => s.id).toList();
+    final skipped = _selected.length - targets.length;
+    if (targets.isEmpty) {
+      showToast(context, '所选短片都已有工作室，无需设置');
+      return;
+    }
     setState(() => _batchBusy = true);
     try {
-      final (done, failed, aborted) = await _fanOut(_selected.toList(),
+      final (done, failed, aborted) = await _fanOut(targets,
           (id) => _api.updateScene({'id': id, 'studio_id': picked}));
       if (!mounted) return;
-      _finishBatch('已设置工作室 $done 个', failed, aborted: aborted);
+      _finishBatch(
+          '已设置工作室 $done 个'
+          '${skipped > 0 ? '，跳过已有工作室 $skipped 个' : ''}',
+          failed,
+          aborted: aborted);
     } finally {
       if (mounted && _batchBusy) setState(() => _batchBusy = false);
     }
@@ -485,8 +497,15 @@ class _SceneListPageState extends State<SceneListPage> {
       selected: const <String>{},
     );
     if (picks == null || picks.isEmpty || !mounted || _batchBusy) return;
-    final targets = _selectedScenes;
-    if (targets.isEmpty) return;
+    // 已含全部所选演员的直接跳过，只给还缺的写，避免整批空转。
+    final targets = _selectedScenes
+        .where((s) => !picks.every(s.performers.map((p) => p.id).contains))
+        .toList();
+    final skipped = _selected.length - targets.length;
+    if (targets.isEmpty) {
+      showToast(context, '所选短片都已含这些演员，无需添加');
+      return;
+    }
     final byId = {for (final s in targets) s.id: s};
     setState(() => _batchBusy = true);
     try {
@@ -497,7 +516,11 @@ class _SceneListPageState extends State<SceneListPage> {
             {'id': id, 'performer_ids': cur.union(picks).toList()});
       });
       if (!mounted) return;
-      _finishBatch('已添加演员 $done 个', failed, aborted: aborted);
+      _finishBatch(
+          '已添加演员 $done 个'
+          '${skipped > 0 ? '，跳过已含全部所选演员 $skipped 个' : ''}',
+          failed,
+          aborted: aborted);
     } finally {
       if (mounted && _batchBusy) setState(() => _batchBusy = false);
     }
