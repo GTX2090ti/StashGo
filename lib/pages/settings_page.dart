@@ -261,7 +261,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 24),
         Text('关于', style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
-        Text('Stash 1.6.89', style: theme.textTheme.bodySmall),
+        Text('Stash 1.6.90', style: theme.textTheme.bodySmall),
         if (!_cfg.storageAvailable)
           Padding(
             padding: const EdgeInsets.only(top: 8),
