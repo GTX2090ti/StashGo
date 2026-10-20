@@ -1,6 +1,6 @@
 # StashScrubber (iOS)
 
-An **iOS client (Flutter)** for the [Stash](https://github.com/stashapp/stash) media manager, compatible with **Stash 0.31.x**. Ported from the HarmonyOS Flutter version (StashScrubber-Harmony), feature-synced to v1.6.88.
+An **iOS client (Flutter)** for the [Stash](https://github.com/stashapp/stash) media manager, compatible with **Stash 0.31.x**. Ported from the HarmonyOS Flutter version (StashScrubber-Harmony), feature-synced to v1.6.89.
 
 > The original SwiftUI native iOS app (v1.6.0) is archived on branch `backup/native-ios-1.6.0`.
 
@@ -15,7 +15,8 @@ An **iOS client (Flutter)** for the [Stash](https://github.com/stashapp/stash) m
 - Infinite scroll with position restore on back; no paging buttons
 - Combined search: title / path / details + performer name + tag + studio
 - Sort (date newest-first, etc.) + filters (studio/performer/tag with search & multi-select) + batch actions (favorite / rating / tags / merge / generate covers / set studio / add performers / select all); the studio / performer / tag pickers all have a search box
-- Detail: scrape (**keeps existing studio**; scraped tags are unioned with the saved ones instead of replacing them), edit, favorite, merge, generate cover, copy file path, performer/studio links
+- Detail: scrape (**keeps existing studio**; scraped tags are unioned with the saved ones instead of replacing them), edit, favorite, merge, generate cover, **clear all scrape** (confirm first; wipes details/date/URLs/studio/performers/tags and sets the title from the file name), copy file path, performer/studio links
+- Performer chips on the detail page show the **age at filming** ("name · N years") when the scene has a date and the performer has a birthdate
 - **Favorites page with 3 tabs**: Scenes (organized) / Performers (starred) / Studios (starred)
 
 ### Performers
