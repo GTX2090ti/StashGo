@@ -15,7 +15,8 @@ A native HarmonyOS NEXT client (Flutter) for the [Stash](https://github.com/stas
 - Sort: date added / date modified / title / file size / duration / rating / studio, etc. (0.31.1 enums)
 - Filters: rating / date / duration / organized / studio / performer / tag (multi-select + search)
 - Batch actions: favorite, rating, tags, **merge**, **generate covers**, **set studio**, **add performers**, select all — the studio / performer / tag pickers all have a search box
-- Detail page: cover (manual cover takes priority, shown complete without cropping), info, links to performers / studio / tags, edit, scrape, generate cover, favorite
+- Detail page: cover (manual cover takes priority, shown complete without cropping), info, links to performers / studio / tags, edit, scrape, generate cover, favorite, **clear all scrape**
+- Detail page performer chips show the **age at filming** ("name · N years") when the scene has a date and the performer has a birthdate
 - **File section**: full path on its own line with size / duration / modified time; multi-file blocks; set default file
 
 ### Performers · Studios · Tags
@@ -33,6 +34,7 @@ A native HarmonyOS NEXT client (Flutter) for the [Stash](https://github.com/stas
 - **Tags and studios are never overwritten**: write-back unions the scraped tags with the ones already stored (the server treats `tag_ids` as a full replacement, so the merge happens client-side), and keeps the current studio when one is already set
 - **Friendly Chinese error messages** (404 / timeout / not implemented / site fetch failure)
 - **Name-clash protection on write-back**: if another performer already has the same name, the name field is skipped and the rest are saved
+- **Clear all scrape** (scene detail page): empties details / date / URLs / studio / performers / tags and refills the title from the file name (directory and extension stripped); rating, O-count and cover are untouched, and it asks for confirmation first
 
 ### Scan · Jobs · Generate · Identify · Duplicates
 - Scan: all or **selected sub-folders**; optional cover / preview / sprite / phash generation
@@ -81,6 +83,7 @@ cd ohos && hvigorw assembleHap -p product=default -p buildMode=release   # build
 
 ## Changelog
 
+- **v1.6.89**: The scene detail page gains **Clear all scrape** next to the cover button — after a confirmation dialog it wipes details / date / URLs / studio / performers / tags and sets the title to the file name (directory and extension stripped), leaving rating, O-count and cover alone. Performer chips now carry the age at filming ("name · N years") when the scene has a date and the performer has a birthdate.
 - **v1.6.88**: New "Scraper packages" page (Settings → below Plugins): lists the scraper packages installed on the server and loads the ones available from a package index (the source configured on the server by default, falling back to the community index), with search over long lists and multi-select install; selections automatically pull in `requires` dependencies such as `py_common`, which the server does not install for you; installation is an async background job, so the page polls it by job id and shows progress, then reloads scrapers on completion — no container restart needed. Package fields, the `PackageType` enum spelling and the `PackageSpecInput` key names are all trimmed from server introspection, so older Stash versions missing a field no longer break the whole query
 - **v1.6.87**: Scraped results no longer clobber saved tags — applying a scrape to a scene or performer unions the scraped tags with the ones already stored (the server treats `tag_ids` as a full replacement, so the merge happens client-side), and the scrape preview says so; the existing "keep current studio" and "keep performer name" behaviours are unchanged
 - **v1.6.86**: The studio, performer and tag pickers inside the scene multi-select batch bar now share one searchable selection sheet (filter long lists directly, multi-select with a clear button), replacing the three duplicated search-less sheets; the about-page version label follows the build version
