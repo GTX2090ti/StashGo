@@ -15,6 +15,36 @@ List<Map<String, dynamic>> _ml(dynamic v) {
   return const [];
 }
 
+/// Stash 的日期允许只到年（2000）或只到月（2000-05），分隔符也可能是 `.` 或 `/`。
+/// 解析成 (年, 月或 null, 日或 null)；年缺失或写成 199X 这类打码形式时无法定位年份，返回 null。
+(int, int?, int?)? _partialDate(String raw) {
+  final parts = raw.trim().split(RegExp(r'[-/.]'));
+  if (parts.isEmpty || parts.length > 3) return null;
+  final y = int.tryParse(parts[0]);
+  if (y == null || y < 1500 || y > 2100) return null;
+  final m = parts.length > 1 ? int.tryParse(parts[1]) : null;
+  if (m == null || m < 1 || m > 12) return (y, null, null);
+  final d = parts.length > 2 ? int.tryParse(parts[2]) : null;
+  if (d == null || d < 1 || d > 31) return (y, m, null);
+  return (y, m, d);
+}
+
+/// 年龄文案：出生与参照两端都精确到日才做「生日未到」的减一修正，否则只取年份差。
+/// 出生日期解析不出来（没填、或只有 199X 这种打码年）时返回空串，即不显示。
+String _ageText(String birthRaw, String refRaw) {
+  final b = _partialDate(birthRaw);
+  if (b == null) return '';
+  final r = _partialDate(refRaw);
+  final now = DateTime.now();
+  final ry = r?.$1 ?? now.year;
+  var age = ry - b.$1;
+  if (r != null && r.$2 != null && r.$3 != null && b.$2 != null && b.$3 != null &&
+      (r.$2! < b.$2! || (r.$2! == b.$2! && r.$3! < b.$3!))) {
+    age--;
+  }
+  return age < 0 ? '' : '$age 岁';
+}
+
 class Tag {
   final String id;
   final String name;
@@ -223,29 +253,16 @@ class Performer {
 
   /// 年龄：Stash 无此字段，按出生日期推算；已故则算到去世日期。
   String get ageText {
-    final b = DateTime.tryParse(birthdate);
-    if (b == null) return '';
-    final end = DateTime.tryParse(deathDate) ?? DateTime.now();
-    final age = _yearsBetween(b, end);
-    if (age < 0) return '';
-    return deathDate.isNotEmpty ? '$age 岁（去世时）' : '$age 岁';
+    final dead = _partialDate(deathDate) != null;
+    final t = _ageText(birthdate, dead ? deathDate : '');
+    if (t.isEmpty) return '';
+    return dead ? '$t（去世时）' : t;
   }
 
-  /// 拍摄时年龄：按短片拍摄日期 [sceneDate] 推算；缺出生日期或拍摄日期则返回空。
+  /// 拍摄时年龄：按短片拍摄日期推算；短片没填日期就退到去世日期，都没有则按当前日期。
   String ageAt(String sceneDate) {
-    final b = DateTime.tryParse(birthdate);
-    final d = DateTime.tryParse(sceneDate);
-    if (b == null || d == null) return '';
-    final age = _yearsBetween(b, d);
-    return age < 0 ? '' : '$age 岁';
-  }
-
-  static int _yearsBetween(DateTime from, DateTime to) {
-    var n = to.year - from.year;
-    if (to.month < from.month || (to.month == from.month && to.day < from.day)) {
-      n--;
-    }
-    return n;
+    if (_partialDate(sceneDate) != null) return _ageText(birthdate, sceneDate);
+    return _ageText(birthdate, _partialDate(deathDate) != null ? deathDate : '');
   }
 
   static List<Performer> listFrom(dynamic v) =>

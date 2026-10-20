@@ -240,7 +240,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
   }
 
   /// 文件大小格式化。
-  /// 演员标签文案：短片有拍摄日期且演员有出生日期时，附上拍摄时年龄。
+  /// 演员标签文案：演员有出生日期时附上拍摄时年龄，没有则只显示名字。
   static String _performerLabel(Performer p, String sceneDate) {
     final age = p.ageAt(sceneDate);
     return age.isEmpty ? p.name : '${p.name} · $age';
