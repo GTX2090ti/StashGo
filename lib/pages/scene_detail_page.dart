@@ -28,6 +28,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
   String _error = '';
   bool _favBusy = false;
   bool _genBusy = false;
+  bool _clearBusy = false;
   String _primaryFileId = '';
   bool _primaryBusy = false;
 
@@ -93,6 +94,48 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
           .showSnackBar(SnackBar(content: Text('生成封面失败：$e')));
     } finally {
       if (mounted) setState(() => _genBusy = false);
+    }
+  }
+
+  /// 清除当前短片的全部削刮结果：标题改为文件名，其余削刮写入的字段清空。需二次确认。
+  Future<void> _clearScrape() async {
+    final s = _scene;
+    if (s == null || _clearBusy) return;
+    final name = s.fileBaseName;
+    if (name.isEmpty) {
+      showToast(context, '该短片没有可取名的文件');
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('清除全部削刮'),
+        content: Text('将清空该短片的简介、日期、链接、工作室、演员与标签，'
+            '并把标题改为文件名「$name」。\n'
+            '评分、已看次数与封面不受影响。此操作无法撤销。'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
+          FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFE5533D)),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('清除')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _clearBusy = true);
+    try {
+      await _api.clearSceneScrape(s.id, name);
+      await _load();
+      widget.onChanged?.call();
+      if (mounted) showToast(context, '已清除削刮，标题改为「$name」');
+    } catch (e) {
+      if (mounted) showToast(context, '清除失败：$e');
+    } finally {
+      if (mounted) setState(() => _clearBusy = false);
     }
   }
 
@@ -197,6 +240,12 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
   }
 
   /// 文件大小格式化。
+  /// 演员标签文案：短片有拍摄日期且演员有出生日期时，附上拍摄时年龄。
+  static String _performerLabel(Performer p, String sceneDate) {
+    final age = p.ageAt(sceneDate);
+    return age.isEmpty ? p.name : '${p.name} · $age';
+  }
+
   static String _fmtSize(int bytes) {
     if (bytes <= 0) return '';
     if (bytes >= (1 << 30)) {
@@ -241,6 +290,12 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
               tooltip: '生成封面',
               onPressed: _genBusy ? null : () => _generateCover(),
               icon: const Icon(Icons.image_outlined),
+            ),
+          if (s != null)
+            IconButton(
+              tooltip: '清除全部削刮',
+              onPressed: _clearBusy ? null : _clearScrape,
+              icon: const Icon(Icons.cleaning_services_outlined),
             ),
           if (s != null)
             IconButton(
@@ -354,7 +409,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                         children: [
                           for (final p in s.performers)
                             TapChip(
-                              label: p.name,
+                              label: _performerLabel(p, s.date),
                               kind: ChipKind.performer,
                               onTap: () => Navigator.push(
                                 context,

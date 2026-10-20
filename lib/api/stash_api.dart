@@ -1364,6 +1364,22 @@ class StashApi {
     if (d?['sceneUpdate'] == null) throw ApiException('sceneUpdate 失败');
   }
 
+  /// 清除短片的全部削刮结果：标题改用文件名，简介/日期/链接/工作室/演员/标签清空。
+  /// 封面与评分、O 计数属于用户自己的数据，不动。
+  /// studio_id 传 null 才表示取消工作室（缺省不传时 Stash 视为「不修改」）。
+  Future<void> clearSceneScrape(String id, String title) async {
+    await updateScene({
+      'id': id,
+      'title': title,
+      'details': '',
+      'date': '',
+      'urls': <String>[],
+      'studio_id': null,
+      'performer_ids': <String>[],
+      'tag_ids': <String>[],
+    });
+  }
+
   Future<void> updatePerformer(Map<String, dynamic> input) async {
     const m =
         'mutation UpdatePerformer(\$input: PerformerUpdateInput!) { performerUpdate(input: \$input) { id } }';
