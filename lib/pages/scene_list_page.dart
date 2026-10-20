@@ -227,21 +227,50 @@ class _SceneListPageState extends State<SceneListPage> {
     });
   }
 
-  Future<void> _batchFav(bool target) async {
-    if (_selected.isEmpty) return;
-    setState(() => _batchBusy = true);
+  /// 批量写并发闸门：6 并发跑完条目；连续 3 次失败立即中止。
+  /// 逐个串行 + 每次请求 10s 超时，会在服务器不可达时让批量条长时间处于
+  /// 「处理中」（此时除合并/全选外全部置灰），故改为并发 + 快速失败。
+  Future<(int, int, bool)> _fanOut(
+      List<String> ids, Future<void> Function(String id) one) async {
     var done = 0;
     var failed = 0;
-    for (final id in _selected) {
-      try {
-        await _api.updateScene({'id': id, 'organized': target});
-        done++;
-      } catch (_) {
-        failed++;
+    var consecutive = 0;
+    var aborted = false;
+    for (var i = 0; i < ids.length && !aborted; i += 6) {
+      final chunk = ids.skip(i).take(6);
+      final oks = await Future.wait(chunk.map((id) async {
+        try {
+          await one(id);
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }));
+      for (final ok in oks) {
+        if (ok) {
+          done++;
+          consecutive = 0;
+        } else {
+          failed++;
+          if (++consecutive >= 3) aborted = true;
+        }
       }
     }
-    if (!mounted) return;
-    _finishBatch('${target ? "已收藏" : "已取消收藏"} $done 个', failed);
+    return (done, failed, aborted);
+  }
+
+  Future<void> _batchFav(bool target) async {
+    if (_selected.isEmpty || _batchBusy) return;
+    setState(() => _batchBusy = true);
+    try {
+      final (done, failed, aborted) = await _fanOut(_selected.toList(),
+          (id) => _api.updateScene({'id': id, 'organized': target}));
+      if (!mounted) return;
+      _finishBatch('${target ? "已收藏" : "已取消收藏"} $done 个', failed,
+          aborted: aborted);
+    } finally {
+      if (mounted && _batchBusy) setState(() => _batchBusy = false);
+    }
   }
 
   /// 批量生成封面：一次任务提交所有选中短片（服务端后台执行）。
@@ -261,50 +290,53 @@ class _SceneListPageState extends State<SceneListPage> {
   }
 
   Future<void> _batchRating(int v) async {
-    if (_selected.isEmpty) return;
+    if (_selected.isEmpty || _batchBusy) return;
     setState(() => _batchBusy = true);
-    var done = 0;
-    var failed = 0;
-    for (final id in _selected) {
-      try {
-        await _api.updateScene({'id': id, 'rating100': v});
-        done++;
-      } catch (_) {
-        failed++;
-      }
+    try {
+      final (done, failed, aborted) = await _fanOut(_selected.toList(),
+          (id) => _api.updateScene({'id': id, 'rating100': v}));
+      if (!mounted) return;
+      _finishBatch('已设置评分 $done 个', failed, aborted: aborted);
+    } finally {
+      if (mounted && _batchBusy) setState(() => _batchBusy = false);
     }
-    if (!mounted) return;
-    _finishBatch('已设置评分 $done 个', failed);
   }
 
   Future<void> _batchTags(Set<String> picks, bool add) async {
-    if (_selected.isEmpty || picks.isEmpty) return;
+    if (_selected.isEmpty || picks.isEmpty || _batchBusy) return;
+    final targets = _selectedScenes;
+    if (targets.isEmpty) return;
+    final byId = {for (final s in targets) s.id: s};
     setState(() => _batchBusy = true);
-    var done = 0;
-    var failed = 0;
-    for (final s in _selectedScenes) {
-      try {
-        final cur = s.tags.map((t) => t.id).toSet();
+    try {
+      final (done, failed, aborted) =
+          await _fanOut(targets.map((s) => s.id).toList(), (id) async {
+        final cur = byId[id]!.tags.map((t) => t.id).toSet();
         final next = add ? cur.union(picks) : cur.difference(picks);
-        await _api.updateScene({'id': s.id, 'tag_ids': next.toList()});
-        done++;
-      } catch (_) {
-        failed++;
-      }
+        await _api.updateScene({'id': id, 'tag_ids': next.toList()});
+      });
+      if (!mounted) return;
+      _finishBatch('${add ? "已添加标签" : "已移除标签"} $done 个', failed,
+          aborted: aborted);
+    } finally {
+      if (mounted && _batchBusy) setState(() => _batchBusy = false);
     }
-    if (!mounted) return;
-    _finishBatch('${add ? "已添加标签" : "已移除标签"} $done 个', failed);
   }
 
-  void _finishBatch(String okText, int failed) {
-    showToast(context, failed > 0 ? '$okText，$failed 个失败' : okText,
-        error: failed > 0);
+  /// 结束批量：中止时保留勾选，方便用户在链路恢复后重试。
+  void _finishBatch(String okText, int failed, {bool aborted = false}) {
+    final tail = failed > 0
+        ? '，$failed 个失败${aborted ? '（已中止）' : ''}'
+        : '';
+    showToast(context, '$okText$tail', error: failed > 0);
     setState(() {
       _batchBusy = false;
-      _selected = {};
-      _selectMode = false;
+      if (!aborted) {
+        _selected = {};
+        _selectMode = false;
+      }
     });
-    _reload();
+    if (!aborted) _reload();
   }
 
   /// 多选合并：弹窗选择保留的目标短片，其余合入（服务端 sceneMerge）。
@@ -373,8 +405,9 @@ class _SceneListPageState extends State<SceneListPage> {
       _finishBatch('已合并 ${scenes.length} 个短片', 0);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _batchBusy = false);
       showToast(context, '合并失败：$e', error: true);
+    } finally {
+      if (mounted && _batchBusy) setState(() => _batchBusy = false);
     }
   }
 
@@ -422,20 +455,16 @@ class _SceneListPageState extends State<SceneListPage> {
       title: '选择工作室',
       options: [for (final s in studios) (s.id, s.name)],
     );
-    if (picked == null || !mounted) return;
+    if (picked == null || !mounted || _batchBusy) return;
     setState(() => _batchBusy = true);
-    var done = 0;
-    var failed = 0;
-    for (final id in _selected) {
-      try {
-        await _api.updateScene({'id': id, 'studio_id': picked});
-        done++;
-      } catch (_) {
-        failed++;
-      }
+    try {
+      final (done, failed, aborted) = await _fanOut(_selected.toList(),
+          (id) => _api.updateScene({'id': id, 'studio_id': picked}));
+      if (!mounted) return;
+      _finishBatch('已设置工作室 $done 个', failed, aborted: aborted);
+    } finally {
+      if (mounted && _batchBusy) setState(() => _batchBusy = false);
     }
-    if (!mounted) return;
-    _finishBatch('已设置工作室 $done 个', failed);
   }
 
   /// 批量添加演员：把选中的演员追加到所有选中短片。
@@ -455,22 +484,23 @@ class _SceneListPageState extends State<SceneListPage> {
       options: [for (final p in performers) (p.id, p.name)],
       selected: const <String>{},
     );
-    if (picks == null || picks.isEmpty || !mounted) return;
+    if (picks == null || picks.isEmpty || !mounted || _batchBusy) return;
+    final targets = _selectedScenes;
+    if (targets.isEmpty) return;
+    final byId = {for (final s in targets) s.id: s};
     setState(() => _batchBusy = true);
-    var done = 0;
-    var failed = 0;
-    for (final s in _selectedScenes) {
-      try {
-        final cur = s.performers.map((p) => p.id).toSet();
-        final next = cur.union(picks);
-        await _api.updateScene({'id': s.id, 'performer_ids': next.toList()});
-        done++;
-      } catch (_) {
-        failed++;
-      }
+    try {
+      final (done, failed, aborted) =
+          await _fanOut(targets.map((s) => s.id).toList(), (id) async {
+        final cur = byId[id]!.performers.map((p) => p.id).toSet();
+        await _api.updateScene(
+            {'id': id, 'performer_ids': cur.union(picks).toList()});
+      });
+      if (!mounted) return;
+      _finishBatch('已添加演员 $done 个', failed, aborted: aborted);
+    } finally {
+      if (mounted && _batchBusy) setState(() => _batchBusy = false);
     }
-    if (!mounted) return;
-    _finishBatch('已添加演员 $done 个', failed);
   }
 
   /// 排序方式弹窗（与 Stash 对齐，含方向切换）。
@@ -739,6 +769,21 @@ class _SceneListPageState extends State<SceneListPage> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(children: [
+          // 状态提示置于最前：横向滚动时始终可见。
+          // 未勾选 → 除「全选」外全部置灰（有意为之）；批量执行中 → 全部置灰并显示进度。
+          if (_batchBusy) ...[
+            const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 2)),
+            const SizedBox(width: 6),
+            Text('处理中…', style: theme.textTheme.bodySmall),
+          ] else
+            Text(
+              _selected.isEmpty ? '请先勾选短片' : '已选 ${_selected.length}',
+              style: theme.textTheme.bodySmall,
+            ),
+          const SizedBox(width: 8),
           btn(
             label: _allSelectedOrganized ? '取消收藏' : '收藏',
             onPressed: has ? () => _batchFav(!_allSelectedOrganized) : null,
@@ -769,7 +814,9 @@ class _SceneListPageState extends State<SceneListPage> {
           const SizedBox(width: 4),
           btn(
             label: '合并',
-            onPressed: _selected.length >= 2 ? _batchMerge : null,
+            onPressed: (_selected.length >= 2 && !_batchBusy)
+                ? _batchMerge
+                : null,
           ),
           const SizedBox(width: 4),
           btn(
@@ -780,19 +827,11 @@ class _SceneListPageState extends State<SceneListPage> {
           const SizedBox(width: 4),
           btn(
             label: '全选',
-            onPressed: _scenes.isEmpty
+            onPressed: (_scenes.isEmpty || _batchBusy)
                 ? null
                 : () {
                     _toggleSelectAll();
                   },
-          ),
-          const SizedBox(width: 4),
-          Container(
-            width: 24,
-            height: 28,
-            alignment: Alignment.center,
-            child: Text('${_selected.length}',
-                style: theme.textTheme.bodySmall),
           ),
         ]),
       ),

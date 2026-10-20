@@ -64,10 +64,21 @@ class Studio {
   final String imagePath;
   final int rating100;
   final int sceneCount;
+  final int imageCount;
+  final int performerCount;
   final bool favorite;
   final String parentId;
   final String parentName;
   final List<Studio> childStudios;
+
+  /// 以下字段用于编辑表单（列表查询不取，缺省为空）。
+  final List<String> urls;
+  final List<String> aliases;
+  final String details;
+  final bool ignoreAutoTag;
+  final List<Tag> tags;
+  final String createdAt;
+  final String updatedAt;
 
   const Studio({
     required this.id,
@@ -75,10 +86,19 @@ class Studio {
     this.imagePath = '',
     this.rating100 = 0,
     this.sceneCount = 0,
+    this.imageCount = 0,
+    this.performerCount = 0,
     this.favorite = false,
     this.parentId = '',
     this.parentName = '',
     this.childStudios = const [],
+    this.urls = const [],
+    this.aliases = const [],
+    this.details = '',
+    this.ignoreAutoTag = false,
+    this.tags = const [],
+    this.createdAt = '',
+    this.updatedAt = '',
   });
 
   factory Studio.fromJson(dynamic j) => Studio(
@@ -87,10 +107,19 @@ class Studio {
         imagePath: _s(j?['image_path']),
         rating100: _i(j?['rating100']),
         sceneCount: _i(j?['scene_count']),
+        imageCount: _i(j?['image_count']),
+        performerCount: _i(j?['performer_count']),
         favorite: j?['favorite'] == true,
         parentId: _s(j?['parent_studio']?['id']),
         parentName: _s(j?['parent_studio']?['name']),
         childStudios: Studio.listFrom(j?['child_studios']),
+        urls: _sl(j?['urls']),
+        aliases: _sl(j?['aliases']),
+        details: _s(j?['details']),
+        ignoreAutoTag: j?['ignore_auto_tag'] == true,
+        tags: Tag.listFrom(j?['tags']),
+        createdAt: _s(j?['created_at']),
+        updatedAt: _s(j?['updated_at']),
       );
 
   static List<Studio> listFrom(dynamic v) =>

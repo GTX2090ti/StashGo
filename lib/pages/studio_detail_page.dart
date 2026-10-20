@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../widgets/common.dart';
 import 'performer_detail_page.dart';
 import 'scrape_page.dart';
+import 'studio_edit_page.dart';
 
 /// 工作室详情页：图标 + 短片数 + 关联短片。
 class StudioDetailPage extends StatefulWidget {
@@ -125,6 +126,19 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
           title: Text(s != null && s.name.isNotEmpty ? s.name : '工作室详情',
               overflow: TextOverflow.ellipsis),
           actions: [
+            if (s != null)
+              IconButton(
+                tooltip: '编辑工作室',
+                onPressed: () async {
+                  final ok = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => StudioEditPage(studioId: widget.studioId)),
+                  );
+                  if (ok == true && mounted) _load();
+                },
+                icon: const Icon(Icons.edit_outlined),
+              ),
             if (s != null)
               IconButton(
                 tooltip: s.favorite ? '取消收藏' : '收藏',

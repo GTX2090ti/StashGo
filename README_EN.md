@@ -78,6 +78,8 @@ From v1.6.90 both platforms live in this single repository. Before the merge iOS
 
 Same source, two channels.
 
+Artifact names follow one rule: `StashScrubber-<iOS|HarmonyOS>-v<version>-<unsigned|signed>.<ipa|hap>` (e.g. `StashScrubber-iOS-v1.6.91-unsigned.ipa`, `StashScrubber-HarmonyOS-v1.6.91-signed.hap`) — the same name is used for Release assets and in the local `archive/{ipa,hap}` folders.
+
 **iOS** — Codemagic in the cloud (`codemagic.yaml`, `flutter: stable` / `xcode: latest`). Pushing `main` does **not** trigger a build; trigger it from the dashboard and poll that build id. The artifact is an unsigned IPA. For local builds and re-signing see [BUILD_IOS_EN.md](BUILD_IOS_EN.md).
 
 ```bash
@@ -100,11 +102,12 @@ cd ohos && hvigorw assembleHap -p product=default -p buildMode=release
 **HarmonyOS**: requires HarmonyOS NEXT (API 18+).
 
 ```bash
-hdc install -r Stash-Flutter-vX.Y.Z-signed.hap     # overwrite install keeps your data
+hdc install -r StashScrubber-HarmonyOS-vX.Y.Z-signed.hap     # overwrite install keeps your data
 ```
 
 ## Changelog
 
+- **v1.6.91**: The studio detail page gains **Edit** (pencil in the app bar): add and edit now share one form with the Stash 0.31 fields (name, aliases, URLs, parent studio, favourite, rating, tags, details, ignore auto-tagging); only changed fields are submitted, clearing a field really clears it server-side (a cleared parent studio is sent as `null`), and the parent picker excludes the studio itself and its direct children; the studio query now trims its fields from server introspection, so an older Stash missing one no longer breaks the whole query. The scene multi-select batch bar no longer greys every button while a batch is running (only the selected count drives it, and the busy flag is always cleared in `finally`); batch writes now run 6-way concurrent and abort after 3 consecutive failures with the selection kept, instead of a long serial loop that left the buttons dead
 - **v1.6.90**: The age at filming is now derived much more loosely — a birth date filled in only as a year (`2000`) or only to the month still yields "N years" (an exact day is no longer required; the birthday-not-reached correction only applies when both ends are exact), and when the scene has no date it falls back to the performer's death date, then to today; masked birth years such as `199X` still can't be located, so they stay hidden. The HarmonyOS launcher icon now uses the same artwork as iOS (replacing the placeholder SVGs shipped with the project template). The app is named **Stash** everywhere (lock-screen title, unlock prompt, about page). **The iOS and HarmonyOS repositories were merged into this one**: a single `lib/`, and a single build number shared by both platforms
 - **v1.6.89**: The scene detail page gains **Clear all scrape** next to the cover button — after a confirmation dialog it wipes details / date / URLs / studio / performers / tags and sets the title to the file name (directory and extension stripped), leaving rating, O-count and cover alone. Performer chips now carry the age at filming ("name · N years") when the scene has a date and the performer has a birthdate.
 - **v1.6.88**: New "Scraper packages" page (Settings → below Plugins): lists the scraper packages installed on the server and loads the ones available from a package index (the source configured on the server by default, falling back to the community index), with search over long lists and multi-select install; selections automatically pull in `requires` dependencies such as `py_common`, which the server does not install for you; installation is an async background job, so the page polls it by job id and shows progress, then reloads scrapers on completion — no container restart needed. Package fields, the `PackageType` enum spelling and the `PackageSpecInput` key names are all trimmed from server introspection, so older Stash versions missing a field no longer break the whole query

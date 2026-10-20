@@ -1146,13 +1146,46 @@ class StashApi {
     return p == null ? null : Performer.fromJson(p);
   }
 
+  /// findStudio 需要的标量字段；老服务器缺字段时按 introspect 结果裁剪。
+  static const _studioWantFields = <String>[
+    'id', 'name', 'image_path', 'rating100', 'scene_count', 'image_count',
+    'performer_count', 'favorite', 'details', 'urls', 'aliases',
+    'ignore_auto_tag', 'created_at', 'updated_at',
+  ];
+
+  static Set<String>? _studioFieldCache;
+
+  Future<Set<String>> studioFields() async {
+    final cached = _studioFieldCache;
+    if (cached != null) return cached;
+    var out = const <String>{};
+    try {
+      final d = await query('query { __type(name: "Studio") { fields { name } } }');
+      final fs = d?['__type']?['fields'];
+      if (fs is List) {
+        out = fs
+            .map((e) => e is Map ? e['name']?.toString() ?? '' : '')
+            .where((s) => s.isNotEmpty)
+            .toSet();
+      }
+    } catch (_) {}
+    if (out.isNotEmpty) _studioFieldCache = out;
+    return out;
+  }
+
   Future<Studio?> findStudio(String id) async {
-    const q = '''
+    final have = await studioFields();
+    final fields = have.isEmpty
+        ? _studioWantFields
+        : _studioWantFields.where((f) => have.contains(f)).toList();
+    final extraTags = have.isEmpty || have.contains('tags') ? 'tags { id name }' : '';
+    final q = '''
       query FindStudio(\$id: ID!) {
         findStudio(id: \$id) {
-          id name image_path rating100 scene_count favorite
+          ${fields.join(' ')}
           parent_studio { id name }
           child_studios { id name image_path }
+          $extraTags
         }
       }''';
     final d = await query(q, {'id': id});
