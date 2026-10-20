@@ -48,9 +48,16 @@ open ios/Runner.xcworkspace
 
 ## 5. 版本号
 
-三处同步修改（与鸿蒙版一致的习惯）：
-- `pubspec.yaml` → `version: 1.6.57+567`（前者 CFBundleShortVersionString，后者 CFBundleVersion）
-- iOS 构建会自动读取 pubspec 版本，无需手动改 Info.plist。
+两端合并进本仓库后只有一个版本号来源：
+
+- `pubspec.yaml` → `version: 1.6.90+690`（前者 CFBundleShortVersionString，后者 CFBundleVersion）
+- iOS 构建自动读取 pubspec 版本，无需手动改 Info.plist。
+- 鸿蒙侧本机编译用的是构建工作区里的 `pubspec.yaml`，升版时把它改成同一个号（build number 也一致），否则 HAP 与 IPA 的版本对不上。
+
+## 5.1 云端构建（Codemagic）
+
+发版实际走 Codemagic（配置见 `codemagic.yaml`，`flutter: stable` + `xcode: latest`，产物 unsigned IPA）。
+注意：**推送 `main` 不会自动触发构建**，要在面板手动触发并拿着返回的 build id 轮询状态，别用「最新一次构建」代替。
 
 ## 6. App 图标
 

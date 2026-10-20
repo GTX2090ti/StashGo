@@ -14,7 +14,13 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.2.0
   shared_preferences: ^2.3.0
+  shared_preferences: ^2.3.0
+  shared_preferences_ohos: ^2.2.0
   local_auth: ^2.3.0
+  local_auth_ohos:
+    git:
+      url: https://github.com/GTX2090ti/local_auth_ohos.git
+      ref: main
 
 dev_dependencies:
   flutter_test:

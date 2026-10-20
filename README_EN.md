@@ -1,12 +1,22 @@
-# StashScrubber (iOS)
+# Stash (iOS / HarmonyOS)
 
-An **iOS client (Flutter)** for the [Stash](https://github.com/stashapp/stash) media manager, compatible with **Stash 0.31.x**. Ported from the HarmonyOS Flutter version (StashScrubber-Harmony), feature-synced to v1.6.90.
+A Flutter client for the [Stash](https://github.com/stashapp/stash) media manager, compatible with **Stash 0.31.x**. One Dart codebase builds both the **iOS** and **HarmonyOS NEXT** apps.
 
-> The original SwiftUI native iOS app (v1.6.0) is archived on branch `backup/native-ios-1.6.0`.
-
-[中文说明](README.md) | [iOS 构建说明（中文）](BUILD_IOS_ZH.md) | [iOS Build Guide (EN)](BUILD_IOS_EN.md)
+[中文说明](README.md) | [iOS 构建说明（中文）](BUILD_IOS_ZH.md) | [iOS Build Guide (EN)](BUILD_IOS_EN.md) — binaries are attached to this repository's Releases (IPA for iOS, HAP for HarmonyOS, under the same tag)
 
 ---
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `lib/` | All Dart code, shared by both platforms |
+| `ios/` | iOS project (Runner + Info.plist + Podfile) |
+| `ohos/` | HarmonyOS project (DevEco template: `AppScope/`, `entry/`, hvigor config) |
+| `codemagic.yaml` | Cloud iOS build config |
+| `BUILD_IOS_*.md` | iOS local build & IPA packaging details |
+
+From v1.6.90 both platforms live in this single repository. Before the merge iOS and HarmonyOS each had their own repo and `lib/` was synced by hand; now there is one copy, and the version number is a single build number that moves for both platforms together.
 
 ## Features
 
@@ -14,49 +24,103 @@ An **iOS client (Flutter)** for the [Stash](https://github.com/stashapp/stash) m
 - Two-column grid cards: cover, duration, resolution, favorite star, **subtitle badge** (shown when external captions are detected)
 - Infinite scroll with position restore on back; no paging buttons
 - Combined search: title / path / details + performer name + tag + studio
-- Sort (date newest-first, etc.) + filters (studio/performer/tag with search & multi-select) + batch actions (favorite / rating / tags / merge / generate covers / set studio / add performers / select all); the studio / performer / tag pickers all have a search box
-- Detail: scrape (**keeps existing studio**; scraped tags are unioned with the saved ones instead of replacing them), edit, favorite, merge, generate cover, **clear all scrape** (confirm first; wipes details/date/URLs/studio/performers/tags and sets the title from the file name), copy file path, performer/studio links
-- Performer chips on the detail page show the **age at filming** ("name · N years") whenever the performer has a birthdate — a year-only birthdate still counts; an undated scene falls back to the death / current date
-- **Favorites page with 3 tabs**: Scenes (organized) / Performers (starred) / Studios (starred)
+- Sort: date added / date modified / title / file size / duration / rating / studio, etc. (0.31.1 enums)
+- Filters: rating / date / duration / organized / studio / performer / tag (multi-select + search)
+- Batch actions: favorite, rating, tags, **merge**, **generate covers**, **set studio**, **add performers**, select all — the studio / performer / tag pickers all have a search box
+- Detail page: cover (manual cover takes priority, shown complete without cropping), info, links to performers / studio / tags, edit, scrape, generate cover, favorite, **clear all scrape**, copy file path
+- Performer chips show the **age at filming** ("name · N years") whenever the performer has a birth date — a year alone is enough; when the scene has no date it falls back to the death date, then to today; no birth date means no age at all
+- **File section**: full path on its own line with size / duration / modified time; multi-file blocks; set default file
 
-### Performers
-- Grid cards + infinite scroll + search; detail shows aliases (default 5, expandable), merge, delete, **favorite star**
-- Detail grouped into collapsible sections (basics / body / career / images / social / record), collapsed state shows how many fields are filled; **age derived** from birth / death date
-- Edit and create share one full-field collapsible form; saving submits **only the diff** against the original values (a field you clear is really cleared server-side)
-- Scrape (Stash-box / JavDB etc., keeps original name by default), manual create
+### Performers · Studios · Tags
+- Grid/list cards + infinite scroll + search + **sort**; portrait performer / studio cards (3 columns on phones)
+- Performer detail grouped into *Basic / Body / Career / Images / Social / Archive*, collapsible, with filled-field counts on collapsed headers; age derived from the birth (or death) date, shown as age at death when a death date exists
+- Edit and add share that one grouped form; saving submits only changed fields, and a field you clear is really cleared server-side
+- **Performer merge**: from the detail page, multi-select source performers and merge into the current one — resolves duplicates / name clashes
+- Studio detail shows parent / child studios (tappable); **Add** (list page) / **Delete** (detail page, with confirmation)
+- Tags: browse all tags + scenes carrying a tag; related scenes on the detail page
 
-### Batch tools
-- **Bulk identify**: multiple scrape sources (local scrapers / Stash-box) matched against scenes by priority
-- **Duplicates**: finds repeated scenes by perceptual-hash distance + duration delta, multi-select to merge
-- **Stats page**: library totals for scenes / images / performers / studios / tags
-- **Plugins page**: installed plugins with enabled state and task / hook counts
-- **Scraper packages page**: installed packages, browse a package index with search and multi-select install, `requires` dependencies pulled in automatically, install-job progress, scrapers reloaded when it finishes
+### Scraping
+- Three modes: fragment / name / URL scraping
+- Sources: local scrapers + **Stash-box** (StashDB etc.); fragment mode auto-queries box using the local performer name
+- Preview: name / aliases / birthdate / country / measurements / career / tags + image, "Apply & write back" on top
+- Keeps the original performer name by default; write-back compatible with 0.31.1 (`height_cm` / `alias_list` / `performer_input`)
+- **Tags and studios are never overwritten**: write-back unions the scraped tags with the ones already stored (the server treats `tag_ids` as a full replacement, so the merge happens client-side), and keeps the current studio when one is already set
+- **Name-clash protection on write-back**: if another performer already has the same name, the name field is skipped and the rest are saved
+- **Clear all scrape** (scene detail page): empties details / date / URLs / studio / performers / tags and refills the title from the file name (directory and extension stripped); rating, O-count and cover are untouched, and it asks for confirmation first
+- Localized error messages (404 / timeout / not implemented / site fetch failure)
 
-### Studios
-- Grid cards + infinite scroll + search; detail shows **parent / child studios** (navigable), **favorite star**, delete
-- Scrape, edit, manual create
+### Scan · Jobs · Generate · Identify · Duplicates
+- Scan: all or **selected sub-folders**; optional cover / preview / sprite / phash generation
+- Live Stash job queue: scan / generate / clean task progress
+- **Generate covers**: single (detail page) / batch (multi-select) / global (tasks page) — 0.31.1 `metadataGenerate` + `sceneIDs`
+- Full generate options: markers / marker screenshots / transcodes / image phashes / image thumbnails / clip previews, etc.
+- **Batch identify**: auto-match scene metadata from multiple scraper sources (local scrapers / Stash-box) by priority
+- **Duplicates**: find duplicate scenes by phash distance + duration difference, multi-select and merge
 
-### Tags
-- Browse all tags + scenes per tag; related scenes on detail
+### Stats · Plugins
+- Stats page: library-wide totals (scenes / images / performers / studios / tags, etc.)
+- Plugins page: installed plugins, enabled state, task / hook counts
+- Scraper packages page: installed list, browse and multi-select install from a package index, dependency auto-completion, install-job progress, scrapers reloaded when it finishes
 
-### Servers
-- Multi-profile (LAN / WAN, path prefix support) + one-tap switch + server settings in a submenu
-- API Key auth, connection test, network log, diagnostics
+### Servers & Settings
+- Multiple server profiles (LAN / WAN address + API key, path prefixes supported) with one-tap switching in the toolbar and automatic routing by latency
+- **Test connection**, network log, diagnostics page (profile / routing / latency / Stash version)
+- Favorites page with three tabs: scenes (organized) / performers (starred) / studios (starred)
+- **Safe mode**: thumbnails auto-blurred, long-press to peek
+- **Biometric lock**: face unlock first, fingerprint fallback (HarmonyOS uses a custom `local_auth_ohos` fork)
+- Theme: system / light / dark
 
-### Scan / Tasks
-- Selective folder scanning (scenes + images), live task list, cleanup tasks
-
-### Other
-- 3-mode theme (system / light / dark), generate covers, subtitle detection
+### Search & Input
+- **Clear button** on every search bar (scenes / performers / studios / tags / filters / merge / jobs / scrape)
+- **Auto date dashes**: type 20261003 → automatically formatted as 2026-10-03
 
 ## Build
 
-Requires macOS + Xcode 15+, see [BUILD_IOS_EN.md](BUILD_IOS_EN.md). CI uses CodeMagic (`codemagic.yaml`) — pushing `main` auto-builds an unsigned IPA.
+Same source, two channels.
 
-## Server config
+**iOS** — Codemagic in the cloud (`codemagic.yaml`, `flutter: stable` / `xcode: latest`). Pushing `main` does **not** trigger a build; trigger it from the dashboard and poll that build id. The artifact is an unsigned IPA. For local builds and re-signing see [BUILD_IOS_EN.md](BUILD_IOS_EN.md).
 
-1. Add a profile in **Settings**:
-   - LAN: `http://<NAS-IP>:9999`
-   - WAN: `https://stash.example.com` (path prefix supported; `/graphql` is appended automatically)
-2. If Stash uses an API Key, fill it in for the profile.
-3. Tap **Test connection**, then switch LAN/WAN profiles from any list page.
+```bash
+flutter pub get
+flutter build ios --release --no-codesign
+```
+
+**HarmonyOS** — built locally, needs the DevEco OpenHarmony SDK plus the Flutter-OH toolchain. `hvigorw`'s incremental check skips `flutter assemble` when artifacts already exist, so edited Dart silently stays out of the HAP; releases therefore run a two-step "AOT first, then package" script instead of plain `flutter build hap`.
+
+```bash
+flutter pub get
+flutter analyze
+cd ohos && hvigorw assembleHap -p product=default -p buildMode=release
+```
+
+## Install
+
+**iOS**: the unsigned IPA must be re-signed and sideloaded yourself (AltStore / Sideloadly / enterprise certificate).
+
+**HarmonyOS**: requires HarmonyOS NEXT (API 18+).
+
+```bash
+hdc install -r Stash-Flutter-vX.Y.Z-signed.hap     # overwrite install keeps your data
+```
+
+## Changelog
+
+- **v1.6.90**: The age at filming is now derived much more loosely — a birth date filled in only as a year (`2000`) or only to the month still yields "N years" (an exact day is no longer required; the birthday-not-reached correction only applies when both ends are exact), and when the scene has no date it falls back to the performer's death date, then to today; masked birth years such as `199X` still can't be located, so they stay hidden. The HarmonyOS launcher icon now uses the same artwork as iOS (replacing the placeholder SVGs shipped with the project template). The app is named **Stash** everywhere (lock-screen title, unlock prompt, about page). **The iOS and HarmonyOS repositories were merged into this one**: a single `lib/`, and a single build number shared by both platforms
+- **v1.6.89**: The scene detail page gains **Clear all scrape** next to the cover button — after a confirmation dialog it wipes details / date / URLs / studio / performers / tags and sets the title to the file name (directory and extension stripped), leaving rating, O-count and cover alone. Performer chips now carry the age at filming ("name · N years") when the scene has a date and the performer has a birthdate.
+- **v1.6.88**: New "Scraper packages" page (Settings → below Plugins): lists the scraper packages installed on the server and loads the ones available from a package index (the source configured on the server by default, falling back to the community index), with search over long lists and multi-select install; selections automatically pull in `requires` dependencies such as `py_common`, which the server does not install for you; installation is an async background job, so the page polls it by job id and shows progress, then reloads scrapers on completion — no container restart needed. Package fields, the `PackageType` enum spelling and the `PackageSpecInput` key names are all trimmed from server introspection, so older Stash versions missing a field no longer break the whole query
+- **v1.6.87**: Scraped results no longer clobber saved tags — applying a scrape to a scene or performer unions the scraped tags with the ones already stored (the server treats `tag_ids` as a full replacement, so the merge happens client-side), and the scrape preview says so; the existing "keep current studio" and "keep performer name" behaviours are unchanged
+- **v1.6.86**: The studio, performer and tag pickers inside the scene multi-select batch bar now share one searchable selection sheet (filter long lists directly, multi-select with a clear button), replacing the three duplicated search-less sheets; the about-page version label follows the build version
+- **v1.6.85**: Performer records now cover every Stash 0.31.1 field (alias list, gender, birth / death date, height, weight, measurements, fake tits, penis length, circumcision, eye and hair colour, career start / end, tattoos, piercings, URLs, ignore auto-tagging, tags, rating, favourite); edit and add share one grouped, collapsible form whose collapsed headers show how many fields are filled; saving submits only changed fields, and a field you clear is really cleared server-side; the performer detail page uses the same collapsible groups and adds an age derived from the birth date (shown as age at death when a death date exists); performer queries trim themselves against server introspection, so an older Stash missing a field no longer fails the whole query
+- **v1.6.84**: Batch identify page (auto-match metadata from multiple scraper sources by priority); duplicates page (find by phash distance + duration diff, merge); stats page (library-wide totals); plugins page (list / enabled state / task & hook counts); new batch actions "set studio" and "add performers" (performers appended, not replaced); full generate options (markers / marker screenshots / transcodes / image phashes / image thumbnails / clip previews); fix auto-tag 422 (field type now `[String!]`); manual cover takes priority and detail covers show complete without cropping; portrait performer / studio cards (3 columns on phones)
+- **v1.6.70**: Synced all iOS features: safe mode (blurred thumbnails), favorites page, infinite scroll; biometric lock (face first, fingerprint fallback, via a custom local_auth_ohos fork)
+- **v1.6.58**: Tablet-adaptive column counts; two-column detail layout on wide screens; player-style cover background (fill + bottom gradient)
+- **v1.6.57**: Performer merge (⧉ button on detail page — multi-select source performers, merge into the current one; resolves duplicates / name clashes); name-clash protection on write-back (UNIQUE conflict → skip the name, save the rest)
+- **v1.6.55**: Friendly scrape errors (404 / timeout / not implemented / site fetch failure); auto date dashes (YYYY-MM-DD); file-section divider
+- **v1.6.52**: Performer fragment scraping fixed (0.31.1 returns not implemented for performer_id → now sends performer_input)
+- **v1.6.51**: Clear button on every search bar (scenes / performers / studios / tags / filters / merge / jobs / scrape)
+- **v1.6.50**: Simplified Chinese terminology (phash / sprite / preview); generate-cover query field fix (interactiveHeatmaps)
+- **v1.6.48**: Sort for performer / studio main lists; sort for related scenes; scene detail file section (full path wrapping, size / duration / modified time, multi-file blocks, set default file)
+- **v1.6.46**: Generate covers for scenes (detail + batch); Stash-box fragment scraping (uses local performer name); keep original performer name on scrape by default; performer aliases on detail (5 shown, expandable); subtitle badge on scene covers; add/delete performers & studios; fix performer detail 422 (`Performer.alias_list`)
+- Earlier: bottom navigation, infinite scroll, paging removed, favorites, 0.31.1 sort enums, scrape write-back field compatibility, Chinese-localized copy & paste
+
+> Note: Starting from v1.6.46 this repository hosts the full Flutter source code; the earlier ArkTS version remains in git history (tag v1.6.1 and before). The original SwiftUI native iOS app (v1.6.0) is archived on branch `backup/native-ios-1.6.0`.

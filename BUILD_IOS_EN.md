@@ -50,9 +50,16 @@ need a unique one like `com.<yourid>.stashscrubber`) → select your iPhone → 
 
 ## 5. Version number
 
-Sync in one place:
-- `pubspec.yaml` → `version: 1.6.57+567` (first part = CFBundleShortVersionString, second = CFBundleVersion)
+After the repository merge there is a single source for the version:
+
+- `pubspec.yaml` → `version: 1.6.90+690` (first part = CFBundleShortVersionString, second = CFBundleVersion)
 - The iOS build reads the version from pubspec automatically; no manual Info.plist edit needed.
+- The local HarmonyOS build reads the pubspec of its own build workspace — set that one to the same version and build number when bumping, otherwise the HAP and IPA drift apart.
+
+## 5.1 Cloud build (Codemagic)
+
+Releases are actually built on Codemagic (config in `codemagic.yaml`, `flutter: stable` + `xcode: latest`, artifact = unsigned IPA).
+Note: **pushing `main` does not trigger a build** — trigger it from the dashboard and poll the returned build id; don't read "the latest build" as yours.
 
 ## 6. App icon
 
