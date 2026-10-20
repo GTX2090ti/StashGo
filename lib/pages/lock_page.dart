@@ -55,7 +55,7 @@ class _LockPageState extends State<LockPage> {
     });
     try {
       final ok = await _auth.authenticate(
-        localizedReason: '验证您的身份以解锁 StashScrubber',
+        localizedReason: '验证您的身份以解锁 Stash',
         options: const AuthenticationOptions(
           // 允许回退到系统密码，避免 Face ID 不可用时锁死
           stickyAuth: true,
@@ -107,7 +107,7 @@ class _LockPageState extends State<LockPage> {
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'StashScrubber',
+                    'Stash',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),

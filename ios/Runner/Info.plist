@@ -8,7 +8,7 @@
 		<true/>
 	</dict>
 	<key>NSFaceIDUsageDescription</key>
-	<string>需要验证您的身份以解锁 StashScrubber，保护隐私内容。</string>
+	<string>需要验证您的身份以解锁 Stash，保护隐私内容。</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>需要访问本地网络以连接您的 Stash 媒体服务器（局域网内网访问）。</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
@@ -16,7 +16,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>StashScrubber</string>
+	<string>Stash</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
