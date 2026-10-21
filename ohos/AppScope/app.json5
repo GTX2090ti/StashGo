@@ -2,8 +2,8 @@
   "app": {
     "bundleName": "com.gtx2090ti.stashscrubber",
     "vendor": "GTX2090ti",
-    "versionCode": 690,
-    "versionName": "1.6.90",
+    "versionCode": 691,
+    "versionName": "1.6.92",
     "icon": "$media:app_icon",
     "label": "$string:app_name"
   }

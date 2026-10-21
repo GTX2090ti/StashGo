@@ -78,7 +78,7 @@ Stash 媒体库的 Flutter 客户端，兼容 **Stash 0.31.x**。一套 Dart 源
 
 两端构建通道不同，源码同一份。
 
-产物命名统一为 `StashScrubber-<iOS|HarmonyOS>-v<版本>-<unsigned|signed>.<ipa|hap>`（如 `StashScrubber-iOS-v1.6.91-unsigned.ipa`、`StashScrubber-HarmonyOS-v1.6.91-signed.hap`），Release 附件与归档目录 `archive/{ipa,hap}` 都用这个名字。
+产物命名统一为 `StashScrubber-<iOS|HarmonyOS>-v<版本>-<unsigned|signed>.<ipa|hap>`（如 `StashScrubber-iOS-v1.6.92-unsigned.ipa`、`StashScrubber-HarmonyOS-v1.6.92-signed.hap`），Release 附件与归档目录 `archive/{ipa,hap}` 都用这个名字。
 
 **iOS** —— 云端 Codemagic（`codemagic.yaml`，`flutter: stable` / `xcode: latest`）。推送 `main` **不会**自动触发构建，需在面板手动触发并轮询。产物为未签名 IPA，本地构建与自签步骤见 [BUILD_IOS_ZH.md](BUILD_IOS_ZH.md)。
 
@@ -107,6 +107,7 @@ hdc install -r StashScrubber-HarmonyOS-vX.Y.Z-signed.hap     # 覆盖安装保�
 
 ## 版本历史
 
+- **v1.6.92**：批量削刮（Identify）修好 Stash 0.31 下的 422——识别选项不再平铺在 `IdentifyMetadataInput` 上，改按服务端内省放进 `options`，来源按 `IdentifySourceInput.source` 包装，字段按内省结果裁剪并兼容旧版服务端。短片列表在详情页编辑后返回不再跳回顶部：刷新推迟到详情路由弹出、列表重新可见后执行，避免在遮罩下清空网格导致滚动位置丢失。工作室 / 演员 / 标签详情页的关联短片会记住进入前的滚动位置，返回后按原位置恢复（必要时补拉分页再定位）；详情页自身的刷新改为静默刷新，不再销毁已加载的列表。鸿蒙 versionCode 由 601 对齐到 691，与 iOS build number 一致
 - **v1.6.91**：工作室详情页新增「编辑」（标题栏铅笔）：编辑与添加共用同一套表单，字段对齐 Stash 0.31（名称、别名、网址、上级工作室、收藏、评分、标签、简介、忽略自动打标）；只提交改动项，清空的字段会真正清除服务端值（清空上级工作室按 `null` 提交），上级候选自动排除自己与自己的直接子工作室；工作室查询字段改为按服务端内省自动裁剪，旧版 Stash 缺字段不再导致整条查询失败。短片多选批量条不再因「批量执行中」把按钮整排置灰（改由勾选数量决定，且 busy 标记一律在 `finally` 里复位）；批量写改为 6 并发 + 连续 3 次失败即中止并保留勾选，不再出现长时间串行等待、按钮点不动的状态
 - **v1.6.90**：演员标签的拍摄时年龄改成更宽松的推算——出生日期只填到年（`2000`）或只到月也能得出「N 岁」（不再要求精确到日，出生与拍摄两端都精确到日才做生日修正），短片没填日期时先退到演员去世日期、再退到当前日期；出生日期写成 `199X` 这类打码年份仍定位不到具体年，照旧不显示；应用图标改用与 iOS 版同一套图案（换掉工程自带的占位 SVG）；应用名统一为 Stash（锁屏标题、解锁提示、关于页一并改）；**iOS 与鸿蒙两个仓库合并为本仓库**，`lib/` 只留一份，版本号统一为单个 build number
 - **v1.6.89**：短片详情页新增「清除全部削刮」（生成封面旁边）：二次确认后清空该短片的简介、日期、链接、工作室、演员与标签，标题改用文件名（去目录、去扩展名），评分 / 已看次数 / 封面不动；演员标签在短片有拍摄日期且演员有出生日期时附拍摄时年龄（「名字 · N 岁」）

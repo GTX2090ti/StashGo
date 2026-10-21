@@ -83,7 +83,8 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    // 已有内容时静默刷新：切到 StatusView 会销毁关联短片列表，滚动位置随之一并丢失。
+    if (_s == null) setState(() => _loading = true);
     _error = '';
     try {
       final s = await buildApi().findStudio(widget.studioId);

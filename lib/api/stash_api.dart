@@ -321,7 +321,9 @@ class StashApi {
   /// 批量识别（Identify）：按 [sources] 顺序自动匹配短片元数据
   /// （0.31+ mutation 为 metadataIdentify，兼容旧版 identify）。
   /// [sources] 每项形如 {'scraper_id': id} 或 {'stash_box_endpoint': url}；
-  /// 顺序即优先级，第一个命中即采用。只把勾选的选项写入 input。
+  /// 顺序即优先级，第一个命中即采用。
+  /// 识别开关属于 input.options（不是 input 顶层），按服务端实际字段放置；
+  /// Stash 这些开关默认 true，所以 false 也要显式下发。
   Future<void> identifyScenes({
     required List<Map<String, dynamic>> sources,
     bool setCoverImage = true,
@@ -331,40 +333,62 @@ class StashApi {
     List<String>? sceneIDs,
     List<String>? paths,
   }) async {
-    final fields = await mutationFields();
-    final m =
-        fields.contains('metadataIdentify') ? 'metadataIdentify' : 'identify';
-    final vars = <String, dynamic>{};
-    final varDecls = <String>[];
-    final inputFields = <String>[];
-    void addBool(String name, bool v) {
-      if (v) {
-        vars[name] = true;
-        varDecls.add('\$$name: Boolean');
-        inputFields.add('$name: \$$name');
-      }
+    final ms = await mutationFields();
+    final m = ms.contains('metadataIdentify') ? 'metadataIdentify' : 'identify';
+    final inFields = await inputFields('IdentifyMetadataInput');
+    final optFields = await inputFields('IdentifyMetadataOptionsInput');
+    final srcFields = await inputFields('IdentifySourceInput');
+
+    final opts = <String, dynamic>{};
+    void addOpt(String name, bool v) {
+      if (optFields.contains(name)) opts[name] = v;
     }
 
-    addBool('setCoverImage', setCoverImage);
-    addBool('setOrganized', setOrganized);
-    addBool('skipMultipleMatches', skipMultipleMatches);
-    addBool('skipSingleNamePerformers', skipSingleNamePerformers);
-    vars['sources'] = sources;
-    varDecls.add('\$sources: [IdentifySourceInput!]!');
-    inputFields.add('sources: \$sources');
-    if (sceneIDs != null && sceneIDs.isNotEmpty) {
+    addOpt('setCoverImage', setCoverImage);
+    addOpt('setOrganized', setOrganized);
+    addOpt('skipMultipleMatches', skipMultipleMatches);
+    addOpt('skipSingleNamePerformers', skipSingleNamePerformers);
+
+    final vars = <String, dynamic>{};
+    final decls = <String>[];
+    final parts = <String>[];
+
+    // 0.31 的 IdentifySourceInput 是 { source: ScraperSourceInput! }，旧版才平铺。
+    final wrapSource = srcFields.isEmpty || srcFields.contains('source');
+    vars['sources'] =
+        wrapSource ? [for (final s in sources) {'source': s}] : sources;
+    decls.add('\$sources: [IdentifySourceInput!]!');
+    parts.add('sources: \$sources');
+
+    if (opts.isNotEmpty) {
+      if (inFields.isEmpty || inFields.contains('options')) {
+        vars['options'] = opts;
+        decls.add('\$options: IdentifyMetadataOptionsInput');
+        parts.add('options: \$options');
+      } else {
+        for (final e in opts.entries) {
+          vars[e.key] = e.value;
+          decls.add('\$${e.key}: Boolean');
+          parts.add('${e.key}: \$${e.key}');
+        }
+      }
+    }
+    if (sceneIDs != null &&
+        sceneIDs.isNotEmpty &&
+        (inFields.isEmpty || inFields.contains('sceneIDs'))) {
       vars['sceneIDs'] = sceneIDs;
-      varDecls.add('\$sceneIDs: [ID!]');
-      inputFields.add('sceneIDs: \$sceneIDs');
+      decls.add('\$sceneIDs: [ID!]');
+      parts.add('sceneIDs: \$sceneIDs');
     }
-    if (paths != null && paths.isNotEmpty) {
+    if (paths != null &&
+        paths.isNotEmpty &&
+        (inFields.isEmpty || inFields.contains('paths'))) {
       vars['paths'] = paths;
-      varDecls.add('\$paths: [String!]');
-      inputFields.add('paths: \$paths');
+      decls.add('\$paths: [String!]');
+      parts.add('paths: \$paths');
     }
-    final head =
-        varDecls.isEmpty ? 'mutation' : 'mutation(${varDecls.join(', ')})';
-    final gq = '$head { $m(input: { ${inputFields.join(', ')} }) }';
+    final gq =
+        'mutation(${decls.join(', ')}) { $m(input: { ${parts.join(', ')} }) }';
     await query(gq, vars, const Duration(seconds: 15));
   }
 

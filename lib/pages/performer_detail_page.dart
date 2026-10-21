@@ -104,6 +104,33 @@ class _RelatedScenesState extends State<RelatedScenes> {
     }
   }
 
+  /// 进入短片前记住外层列表的位置，返回后恢复，避免长列表被刷回顶部。
+  Future<void> _openScene(Scene s) async {
+    final c = widget.scrollController;
+    final saved = (c != null && c.hasClients) ? c.offset : 0.0;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => SceneDetailPage(sceneId: s.id)),
+    );
+    if (!mounted || c == null || saved <= 0) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      while (mounted &&
+          c.hasClients &&
+          c.position.hasContentDimensions &&
+          _hasMore &&
+          c.position.maxScrollExtent < saved) {
+        await _loadMore();
+        if (!mounted) return;
+        await WidgetsBinding.instance.endOfFrame;
+      }
+      if (!mounted || !c.hasClients || !c.position.hasContentDimensions) return;
+      final max = c.position.maxScrollExtent;
+      final target = saved <= max ? saved : max;
+      if ((c.offset - target).abs() > 1) c.jumpTo(target);
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
   /// 排序方式弹窗（与 Stash 对齐，含方向切换）。
   Future<void> _openSortSheet() async {
     final picked = await showModalBottomSheet<String>(
@@ -265,11 +292,7 @@ class _RelatedScenesState extends State<RelatedScenes> {
             artist: artist,
             tagCount: s.tags.length,
             hasCaption: s.captions.isNotEmpty,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => SceneDetailPage(sceneId: s.id)),
-            ),
+            onTap: () => _openScene(s),
           );
         },
       ),
@@ -345,7 +368,8 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    // 已有内容时静默刷新：切到 StatusView 会销毁关联短片列表，滚动位置随之一并丢失。
+    if (_p == null) setState(() => _loading = true);
     _error = '';
     try {
       final p = await buildApi().findPerformer(widget.performerId);

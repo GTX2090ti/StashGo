@@ -605,16 +605,29 @@ class _SceneListPageState extends State<SceneListPage> {
     }
   }
 
+  /// 详情页里改完数据时，列表仍被路由遮住：此时刷新会清空 _scenes、把网格
+  /// 换成 StatusView，滚动位置恢复拿不到已挂载的 controller，退出后便回到顶部。
+  /// 因此只记脏标记，等详情页真正弹出、列表重新可见后再刷新。
+  bool _sceneDirty = false;
+
   void _openScene(String id) {
     if (_selectMode) {
       _toggleSelect(id);
       return;
     }
+    _sceneDirty = false;
     Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (_) => SceneDetailPage(sceneId: id, onChanged: _reload)),
-    );
+          builder: (_) => SceneDetailPage(
+                sceneId: id,
+                onChanged: () => _sceneDirty = true,
+              )),
+    ).then((_) {
+      if (!mounted || !_sceneDirty) return;
+      _sceneDirty = false;
+      _reload();
+    });
   }
 
   // ---------- 生效地址栏 ----------
