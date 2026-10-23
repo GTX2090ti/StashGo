@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../widgets/common.dart';
+import 'group_create_page.dart';
 import 'performer_detail_page.dart';
 import 'studio_detail_page.dart';
 import '../l10n/l10n.dart';
@@ -71,6 +72,24 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
           g != null && g.name.isNotEmpty ? g.name : tr('集合详情'),
           overflow: TextOverflow.ellipsis,
         ),
+        actions: [
+          if (g != null)
+            IconButton(
+              tooltip: tr('编辑'),
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () async {
+                final ok = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => GroupCreatePage(initial: g)),
+                );
+                if (ok == true && context.mounted) {
+                  showToast(context, tr('已保存'));
+                  _load();
+                }
+              },
+            ),
+        ],
       ),
       body: _loading
           ? StatusView(loading: true, empty: '', onRetry: _load)

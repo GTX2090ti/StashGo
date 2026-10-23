@@ -6,9 +6,11 @@ import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
 import '../l10n/l10n.dart';
 
-/// 新建集合页；成功后 pop 新集合 id。
+/// 新建 / 编辑集合页。新建成功后 pop 新集合 id，编辑成功后 pop true。
 class GroupCreatePage extends StatefulWidget {
-  const GroupCreatePage({super.key});
+  const GroupCreatePage({super.key, this.initial});
+
+  final Group? initial;
 
   @override
   State<GroupCreatePage> createState() => _GroupCreatePageState();
@@ -37,6 +39,18 @@ class _GroupCreatePageState extends State<GroupCreatePage> {
   @override
   void initState() {
     super.initState();
+    final g = widget.initial;
+    if (g != null) {
+      _nameCtrl.text = g.name;
+      _dateCtrl.text = g.date;
+      _aliasCtrl.text = g.aliases;
+      _directorCtrl.text = g.director;
+      _urlsCtrl.text = g.urls.join('\n');
+      _synopsisCtrl.text = g.synopsis;
+      _rating = g.rating100;
+      _studioId = g.studio?.id ?? '';
+      _tagIds = g.tags.map((t) => t.id).toSet();
+    }
     _load();
   }
 
@@ -72,31 +86,48 @@ class _GroupCreatePageState extends State<GroupCreatePage> {
       _saving = true;
       _error = '';
     });
-    final extra = <String, dynamic>{};
     final date = _dateCtrl.text.trim();
-    if (date.isNotEmpty) extra['date'] = date;
     final alias = _aliasCtrl.text.trim();
-    if (alias.isNotEmpty) extra['aliases'] = alias;
     final director = _directorCtrl.text.trim();
-    if (director.isNotEmpty) extra['director'] = director;
     final synopsis = _synopsisCtrl.text.trim();
-    if (synopsis.isNotEmpty) extra['synopsis'] = synopsis;
     final urls = _urlsCtrl.text
         .split('\n')
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .toList();
-    if (urls.isNotEmpty) extra['urls'] = urls;
-    if (_rating > 0) extra['rating100'] = _rating;
-    if (_studioId.isNotEmpty) extra['studio_id'] = _studioId;
-    if (_tagIds.isNotEmpty) extra['tag_ids'] = _tagIds.toList();
     try {
-      final g = await _api.createGroup(name, extra);
-      if (!mounted) return;
-      Navigator.pop(context, g.id);
+      final editing = widget.initial;
+      if (editing != null) {
+        await _api.updateGroup(editing.id, {
+          'name': name,
+          'aliases': alias,
+          'date': date,
+          'director': director,
+          'synopsis': synopsis,
+          'urls': urls,
+          'rating100': _rating,
+          'studio_id': _studioId.isEmpty ? null : _studioId,
+          'tag_ids': _tagIds.toList(),
+        });
+        if (!mounted) return;
+        Navigator.pop(context, true);
+      } else {
+        final extra = <String, dynamic>{};
+        if (date.isNotEmpty) extra['date'] = date;
+        if (alias.isNotEmpty) extra['aliases'] = alias;
+        if (director.isNotEmpty) extra['director'] = director;
+        if (synopsis.isNotEmpty) extra['synopsis'] = synopsis;
+        if (urls.isNotEmpty) extra['urls'] = urls;
+        if (_rating > 0) extra['rating100'] = _rating;
+        if (_studioId.isNotEmpty) extra['studio_id'] = _studioId;
+        if (_tagIds.isNotEmpty) extra['tag_ids'] = _tagIds.toList();
+        final g = await _api.createGroup(name, extra);
+        if (!mounted) return;
+        Navigator.pop(context, g.id);
+      }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = tr('创建失败：{error}', {'error': e}));
+      setState(() => _error = tr('保存失败：{error}', {'error': e}));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -133,7 +164,8 @@ class _GroupCreatePageState extends State<GroupCreatePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(tr('添加集合'))),
+      appBar: AppBar(
+          title: Text(widget.initial == null ? tr('添加集合') : tr('编辑集合'))),
       body: _loading
           ? StatusView(loading: true, empty: '', onRetry: _load)
           : ListView(
@@ -245,7 +277,11 @@ class _GroupCreatePageState extends State<GroupCreatePage> {
             height: 46,
             child: FilledButton(
               onPressed: _saving ? null : _save,
-              child: Text(_saving ? tr('保存中…') : tr('创建')),
+              child: Text(_saving
+                  ? tr('保存中…')
+                  : widget.initial == null
+                      ? tr('创建')
+                      : tr('保存')),
             ),
           ),
         ),

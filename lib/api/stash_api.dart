@@ -1476,6 +1476,17 @@ class StashApi {
     return Group.fromJson(g);
   }
 
+  /// 编辑集合。只提交调用方给出的字段；显式传 null / 空列表即清空。
+  Future<void> updateGroup(String id, Map<String, dynamic> fields) async {
+    const m = '''
+      mutation GroupUpdate(\$input: GroupUpdateInput!) {
+        groupUpdate(input: \$input) { id }
+      }''';
+    await query(m, {
+      'input': {'id': id, ...fields},
+    });
+  }
+
   /// 短片的集合成员关系：scene_id -> { group_id: scene_index }。
   /// 集合成员存在短片侧，写入时必须带上原有集合，否则会被整体覆盖。
   Future<Map<String, Map<String, int?>>> sceneGroups(

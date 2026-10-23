@@ -715,6 +715,7 @@ const Map<String, String> enStrings = {
   '所选短片都已在这些集合中': 'All selected scenes are already in these collections',
   '其他信息': 'Other details',
   '添加集合': 'New collection',
+  '编辑集合': 'Edit collection',
   '新建集合': 'New collection',
   '集合名称': 'Collection name',
   '集合名称不能为空': 'Collection name is required',

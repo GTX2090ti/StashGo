@@ -390,12 +390,16 @@ class _GroupsPageState extends State<GroupsPage> {
                             ),
                           ),
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => GroupDetailPage(groupId: g.id),
-                            ),
-                          ),
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    GroupDetailPage(groupId: g.id),
+                              ),
+                            );
+                            if (mounted) _reload();
+                          },
                         ),
                       );
                     },
