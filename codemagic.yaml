@@ -21,7 +21,9 @@ workflows:
       - name: Build iOS (unsigned)
         script: |
           set -e
-          flutter build ios --release --no-codesign
+          VERSION=$(sed -n 's/^version: *\([0-9][0-9.]*\).*/\1/p' pubspec.yaml | head -1)
+          echo "App version: $VERSION"
+          flutter build ios --release --no-codesign --dart-define=APP_VERSION="$VERSION"
       - name: Package IPA
         script: |
           set -e

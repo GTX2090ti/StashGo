@@ -27,15 +27,18 @@ class StashApi {
   Uri get _endpoint => Uri.parse('${normalizeBase(baseUrl)}/graphql');
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        if (apiKey.isNotEmpty) 'ApiKey': apiKey,
-      };
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    if (apiKey.isNotEmpty) 'ApiKey': apiKey,
+  };
 
   /// 查询（query）失败自动重试一次；变更（mutation）不重试（对齐 iOS GraphQLClient）。
   /// 链路层失败（超时 / 连接错误）时先重建会话丢弃吊死连接，再重试一次。
-  Future<dynamic> query(String q,
-      [Map<String, dynamic>? vars, Duration? timeout]) async {
+  Future<dynamic> query(
+    String q, [
+    Map<String, dynamic>? vars,
+    Duration? timeout,
+  ]) async {
     final isMutation = q.trimLeft().toLowerCase().startsWith('mutation');
     try {
       final r = await _queryOnce(q, vars, timeout);
@@ -44,19 +47,19 @@ class StashApi {
     } catch (e) {
       if (isConnectivity(e)) {
         final reason = _friendly(e);
-        ApiSession.instance
-            .reset(tr('查询链路失败（{reason}），重建会话丢弃吊死连接',
-                {'reason': reason}));
+        ApiSession.instance.reset(
+          tr('查询链路失败（{reason}），重建会话丢弃吊死连接', {'reason': reason}),
+        );
         if (!isMutation) {
           try {
             final r = await _queryOnce(q, vars, timeout);
             NetHealth.instance.noteSuccess();
             NetLog.instance.record(
-                category: 'Network',
-                level: 'WARN',
-                title: tr('自动重试成功'),
-                message: tr('首次失败（{reason}），重建会话后重试成功',
-                    {'reason': reason}));
+              category: 'Network',
+              level: 'WARN',
+              title: tr('自动重试成功'),
+              message: tr('首次失败（{reason}），重建会话后重试成功', {'reason': reason}),
+            );
             return r;
           } catch (_) {}
         }
@@ -73,15 +76,20 @@ class StashApi {
     return '$e';
   }
 
-  Future<dynamic> _queryOnce(String q,
-      [Map<String, dynamic>? vars, Duration? timeout]) async {
+  Future<dynamic> _queryOnce(
+    String q, [
+    Map<String, dynamic>? vars,
+    Duration? timeout,
+  ]) async {
     final body = jsonEncode({'query': q, 'variables': vars ?? const {}});
     final sw = Stopwatch()..start();
     final kind = q.trimLeft().toLowerCase().startsWith('mutation')
         ? 'mutation'
         : 'query';
     final firstLine = q.trim().split('\n').first.trim();
-    final title = firstLine.length > 60 ? firstLine.substring(0, 60) : firstLine;
+    final title = firstLine.length > 60
+        ? firstLine.substring(0, 60)
+        : firstLine;
     http.Response resp;
     try {
       resp = await ApiSession.instance.client
@@ -89,23 +97,25 @@ class StashApi {
           .timeout(timeout ?? const Duration(seconds: 10));
     } on TimeoutException {
       NetLog.instance.record(
-          category: 'Network',
-          level: 'ERROR',
-          title: '$kind $title',
-          message: tr('连接超时'),
-          method: 'POST',
-          url: _endpoint.toString(),
-          ms: sw.elapsedMilliseconds);
+        category: 'Network',
+        level: 'ERROR',
+        title: '$kind $title',
+        message: tr('连接超时'),
+        method: 'POST',
+        url: _endpoint.toString(),
+        ms: sw.elapsedMilliseconds,
+      );
       throw ApiException(tr('连接超时'));
     } catch (e) {
       NetLog.instance.record(
-          category: 'Network',
-          level: 'ERROR',
-          title: '$kind $title',
-          message: tr('网络错误: {error}', {'error': e}),
-          method: 'POST',
-          url: _endpoint.toString(),
-          ms: sw.elapsedMilliseconds);
+        category: 'Network',
+        level: 'ERROR',
+        title: '$kind $title',
+        message: tr('网络错误: {error}', {'error': e}),
+        method: 'POST',
+        url: _endpoint.toString(),
+        ms: sw.elapsedMilliseconds,
+      );
       throw ApiException(tr('网络错误: {error}', {'error': e}));
     }
     if (resp.statusCode != 200) {
@@ -131,14 +141,15 @@ class StashApi {
         }
       }
       NetLog.instance.record(
-          category: 'Network',
-          level: 'ERROR',
-          title: '$kind $title',
-          message: detail,
-          method: 'POST',
-          url: _endpoint.toString(),
-          status: resp.statusCode,
-          ms: sw.elapsedMilliseconds);
+        category: 'Network',
+        level: 'ERROR',
+        title: '$kind $title',
+        message: detail,
+        method: 'POST',
+        url: _endpoint.toString(),
+        status: resp.statusCode,
+        ms: sw.elapsedMilliseconds,
+      );
       throw ApiException(detail);
     }
     dynamic decoded;
@@ -146,36 +157,41 @@ class StashApi {
       decoded = jsonDecode(resp.body);
     } catch (_) {
       NetLog.instance.record(
-          category: 'Network',
-          level: 'ERROR',
-          title: '$kind $title',
-          message: tr('响应解析失败'),
-          method: 'POST',
-          url: _endpoint.toString(),
-          status: resp.statusCode,
-          ms: sw.elapsedMilliseconds);
+        category: 'Network',
+        level: 'ERROR',
+        title: '$kind $title',
+        message: tr('响应解析失败'),
+        method: 'POST',
+        url: _endpoint.toString(),
+        status: resp.statusCode,
+        ms: sw.elapsedMilliseconds,
+      );
       throw ApiException(tr('响应解析失败'));
     }
     final errors = decoded?['errors'];
     if (errors is List && errors.isNotEmpty) {
       NetLog.instance.record(
-          category: 'Network',
-          level: 'ERROR',
-          title: '$kind $title',
-          message: errors.first?['message']?.toString() ?? tr('GraphQL 错误'),
-          method: 'POST',
-          url: _endpoint.toString(),
-          status: resp.statusCode,
-          ms: sw.elapsedMilliseconds);
-      throw ApiException(errors.first?['message']?.toString() ?? tr('GraphQL 错误'));
-    }
-    NetLog.instance.record(
         category: 'Network',
+        level: 'ERROR',
         title: '$kind $title',
+        message: errors.first?['message']?.toString() ?? tr('GraphQL 错误'),
         method: 'POST',
         url: _endpoint.toString(),
         status: resp.statusCode,
-        ms: sw.elapsedMilliseconds);
+        ms: sw.elapsedMilliseconds,
+      );
+      throw ApiException(
+        errors.first?['message']?.toString() ?? tr('GraphQL 错误'),
+      );
+    }
+    NetLog.instance.record(
+      category: 'Network',
+      title: '$kind $title',
+      method: 'POST',
+      url: _endpoint.toString(),
+      status: resp.statusCode,
+      ms: sw.elapsedMilliseconds,
+    );
     return decoded?['data'];
   }
 
@@ -224,7 +240,9 @@ class StashApi {
     addBool('scanGeneratePhashes', scanGeneratePhashes);
     addBool('scanGenerateSpritePreviews', scanGenerateSpritePreviews);
 
-    final head = varDecls.isEmpty ? 'mutation' : 'mutation(${varDecls.join(', ')})';
+    final head = varDecls.isEmpty
+        ? 'mutation'
+        : 'mutation(${varDecls.join(', ')})';
     final gq = '$head { metadataScan(input: { ${inputFields.join(', ')} }) }';
     await query(gq, vars, const Duration(seconds: 15));
   }
@@ -277,10 +295,11 @@ class StashApi {
     // 0.31+ 的 GenerateMetadataInput 字段名为 interactiveHeatmapsSpeeds，
     // 旧版 generate 才是 interactiveHeatmaps，按 mutation 名区分。
     addBool(
-        mutation == 'metadataGenerate'
-            ? 'interactiveHeatmapsSpeeds'
-            : 'interactiveHeatmaps',
-        interactiveHeatmaps);
+      mutation == 'metadataGenerate'
+          ? 'interactiveHeatmapsSpeeds'
+          : 'interactiveHeatmaps',
+      interactiveHeatmaps,
+    );
     addBool('clipPreviews', clipPreviews);
     addBool('overwrite', overwrite);
     if (sceneIDs.isNotEmpty) {
@@ -288,8 +307,9 @@ class StashApi {
       varDecls.add('\$sceneIDs: [ID!]!');
       inputFields.add('sceneIDs: \$sceneIDs');
     }
-    final head =
-        varDecls.isEmpty ? 'mutation' : 'mutation(${varDecls.join(', ')})';
+    final head = varDecls.isEmpty
+        ? 'mutation'
+        : 'mutation(${varDecls.join(', ')})';
     final gq = '$head { $mutation(input: { ${inputFields.join(', ')} }) }';
     await query(gq, vars, const Duration(seconds: 15));
   }
@@ -358,8 +378,11 @@ class StashApi {
 
     // 0.31 的 IdentifySourceInput 是 { source: ScraperSourceInput! }，旧版才平铺。
     final wrapSource = srcFields.isEmpty || srcFields.contains('source');
-    vars['sources'] =
-        wrapSource ? [for (final s in sources) {'source': s}] : sources;
+    vars['sources'] = wrapSource
+        ? [
+            for (final s in sources) {'source': s},
+          ]
+        : sources;
     decls.add('\$sources: [IdentifySourceInput!]!');
     parts.add('sources: \$sources');
 
@@ -401,19 +424,24 @@ class StashApi {
     int distance = 16,
     double durationDiff = 15,
   }) async {
-    const gq = '''
+    const gq =
+        '''
       query FindDuplicateScenes(\$distance: Int, \$duration_diff: Float) {
         findDuplicateScenes(distance: \$distance, duration_diff: \$duration_diff) {
           $_sceneCardFields
         }
       }''';
-    final d =
-        await query(gq, {'distance': distance, 'duration_diff': durationDiff});
+    final d = await query(gq, {
+      'distance': distance,
+      'duration_diff': durationDiff,
+    });
     final v = d?['findDuplicateScenes'];
     if (v is! List) return const [];
     return v
-        .map((g) =>
-            (g as List).where((e) => e != null).map(Scene.fromJson).toList())
+        .map(
+          (g) =>
+              (g as List).where((e) => e != null).map(Scene.fromJson).toList(),
+        )
         .toList();
   }
 
@@ -472,22 +500,25 @@ class StashApi {
   Future<List<String>> libraryPaths() async {
     try {
       final d = await query(
-          'query { configuration { general { stashes { path } } } }');
+        'query { configuration { general { stashes { path } } } }',
+      );
       final list = d?['configuration']?['general']?['stashes'];
       if (list is List && list.isNotEmpty) {
-        final paths = list
-            .map((e) => e is Map ? e['path']?.toString() : null)
-            .whereType<String>()
-            .where((s) => s.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
+        final paths =
+            list
+                .map((e) => e is Map ? e['path']?.toString() : null)
+                .whereType<String>()
+                .where((s) => s.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
         if (paths.isNotEmpty) return paths;
       }
     } catch (_) {}
     try {
       final d = await query(
-          'query { configuration { general { libraryFolders { path } } } }');
+        'query { configuration { general { libraryFolders { path } } } }',
+      );
       final list = d?['configuration']?['general']?['libraryFolders'];
       if (list is List) {
         final paths = list
@@ -500,7 +531,8 @@ class StashApi {
     } catch (_) {}
     try {
       final d = await query(
-          'query { configuration { general { libraryPath } } }');
+        'query { configuration { general { libraryPath } } }',
+      );
       final p = d?['configuration']?['general']?['libraryPath']?.toString();
       if (p != null && p.isNotEmpty) return [p];
     } catch (_) {}
@@ -508,13 +540,14 @@ class StashApi {
       final d = await query('query { findFolders { folders { path } } }');
       final list = d?['findFolders']?['folders'];
       if (list is List && list.isNotEmpty) {
-        final paths = list
-            .map((e) => e is Map ? e['path']?.toString() : null)
-            .whereType<String>()
-            .where((s) => s.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
+        final paths =
+            list
+                .map((e) => e is Map ? e['path']?.toString() : null)
+                .whereType<String>()
+                .where((s) => s.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
         if (paths.isNotEmpty) return paths;
       }
     } catch (_) {}
@@ -526,7 +559,8 @@ class StashApi {
   Future<Set<String>> mutationFields() async {
     try {
       final d = await query(
-          'query { __type(name: "Mutation") { fields { name } } }');
+        'query { __type(name: "Mutation") { fields { name } } }',
+      );
       final fs = d?['__type']?['fields'];
       if (fs is List) {
         return fs
@@ -542,7 +576,8 @@ class StashApi {
   Future<Set<String>> inputFields(String typeName) async {
     try {
       final d = await query(
-          'query { __type(name: "$typeName") { inputFields { name } } }');
+        'query { __type(name: "$typeName") { inputFields { name } } }',
+      );
       final fs = d?['__type']?['inputFields'];
       if (fs is List) {
         return fs
@@ -557,9 +592,10 @@ class StashApi {
   /// 当前任务队列（Stash 后台任务：id/状态/描述/子任务）。
   Future<List<dynamic>> jobQueue() async {
     final data = await query(
-        'query { jobQueue { id status description subTasks } }',
-        null,
-        const Duration(seconds: 15));
+      'query { jobQueue { id status description subTasks } }',
+      null,
+      const Duration(seconds: 15),
+    );
     final list = data?['jobQueue'];
     return list is List ? list : [];
   }
@@ -568,12 +604,13 @@ class StashApi {
   /// 旧版回退 movie_count。
   Future<Map<String, dynamic>> stats() async {
     final d = await query(
-        'query { stats { scene_count scenes_size scenes_duration '
-        'image_count images_size gallery_count performer_count studio_count '
-        'group_count movie_count tag_count total_o_count total_play_duration '
-        'total_play_count scenes_played } }',
-        null,
-        const Duration(seconds: 20));
+      'query { stats { scene_count scenes_size scenes_duration '
+      'image_count images_size gallery_count performer_count studio_count '
+      'group_count movie_count tag_count total_o_count total_play_duration '
+      'total_play_count scenes_played } }',
+      null,
+      const Duration(seconds: 20),
+    );
     final s = d?['stats'];
     return s is Map ? Map<String, dynamic>.from(s) : {};
   }
@@ -582,10 +619,11 @@ class StashApi {
   Future<List<dynamic>> plugins() async {
     try {
       final d = await query(
-          'query { plugins { id name description url version enabled '
-          'tasks { name } hooks { name } settings { name display_name type } } }',
-          null,
-          const Duration(seconds: 15));
+        'query { plugins { id name description url version enabled '
+        'tasks { name } hooks { name } settings { name display_name type } } }',
+        null,
+        const Duration(seconds: 15),
+      );
       final list = d?['plugins'];
       return list is List ? list : [];
     } catch (_) {
@@ -635,7 +673,7 @@ class StashApi {
       }''';
     try {
       final d = await query(q, {
-        'filter': {'page': 1, 'per_page': perPage, 'q': term.trim()}
+        'filter': {'page': 1, 'per_page': perPage, 'q': term.trim()},
       });
       return Tag.listFrom(d?['findTags']?['tags']);
     } catch (_) {
@@ -667,7 +705,9 @@ class StashApi {
       query ListScrapers(\$types: [ScrapeContentType!]!) {
         listScrapers(types: \$types) { id name scene { supported_scrapes } performer { supported_scrapes } }
       }''';
-    final d = await query(q, {'types': [typeName]});
+    final d = await query(q, {
+      'types': [typeName],
+    });
     final v = d?['listScrapers'];
     if (v is! List) return const [];
     return v.map((e) => Scraper.fromJson(e)).toList();
@@ -675,7 +715,8 @@ class StashApi {
 
   /// 服务端已配置的 Stash-box 端点（数组顺序即 stash_box_index）。
   Future<List<StashBoxInfo>> stashBoxes() async {
-    const q = 'query { configuration { general { stashBoxes { name endpoint } } } }';
+    const q =
+        'query { configuration { general { stashBoxes { name endpoint } } } }';
     final d = await query(q);
     final conf = d?['configuration'];
     final arr = conf?['general']?['stashBoxes'];
@@ -688,12 +729,17 @@ class StashApi {
   /// 包对象想要字段：0.31 的 `Package` 只有前四个 + requires，
   /// 更早版本的 InstalledPackage/AvailablePackage 另有 author/synopsis/url。
   static const _pkgWantFields = <String>[
-    'package_id', 'name', 'version', 'date', 'sourceURL', 'requires',
-    'author', 'synopsis', 'url'
+    'package_id',
+    'name',
+    'version',
+    'date',
+    'sourceURL',
+    'requires',
+    'author',
+    'synopsis',
+    'url',
   ];
-  static const _pkgMinFields = [
-    'package_id', 'name', 'version', 'sourceURL'
-  ];
+  static const _pkgMinFields = ['package_id', 'name', 'version', 'sourceURL'];
 
   /// 包类型名的探测顺序（0.31 起合并为 Package）。
   static const _pkgInstalledTypes = ['Package', 'InstalledPackage'];
@@ -709,8 +755,10 @@ class StashApi {
     if (cached != null) return cached;
     final out = <String, String>{};
     try {
-      final d = await query('query { __type(name: "$typeName") { fields { '
-          'name type { kind name ofType { kind name ofType { kind name } } } } } }');
+      final d = await query(
+        'query { __type(name: "$typeName") { fields { '
+        'name type { kind name ofType { kind name ofType { kind name } } } } } }',
+      );
       final fs = d?['__type']?['fields'];
       if (fs is List) {
         for (final e in fs.whereType<Map>()) {
@@ -744,7 +792,8 @@ class StashApi {
     var out = 'Scraper';
     try {
       final d = await query(
-          'query { __type(name: "PackageType") { enumValues { name } } }');
+        'query { __type(name: "PackageType") { enumValues { name } } }',
+      );
       final vs = d?['__type']?['enumValues'];
       if (vs is List) {
         final names = vs
@@ -789,7 +838,7 @@ class StashApi {
         final subFields = <String>[
           'package_id',
           'name',
-          'version'
+          'version',
         ].where((n) => sub.containsKey(n)).toList();
         if (subFields.isNotEmpty) {
           parts.add('$f { ${subFields.join(' ')} }');
@@ -804,8 +853,10 @@ class StashApi {
   /// 老版本没有该字段时返回空列表。
   Future<List<PackageSource>> scraperPackageSources() async {
     try {
-      final d = await query('query { configuration { general '
-          '{ scraperPackageSources { name url local_path } } } }');
+      final d = await query(
+        'query { configuration { general '
+        '{ scraperPackageSources { name url local_path } } } }',
+      );
       final arr = d?['configuration']?['general']?['scraperPackageSources'];
       if (arr is! List) return const [];
       return arr.map((e) => PackageSource.fromJson(e)).toList();
@@ -819,10 +870,11 @@ class StashApi {
     final sel = await _pkgSelection(_pkgInstalledTypes);
     final type = await packageTypeScraper();
     final d = await query(
-        'query InstalledPkgs(\$t: PackageType!) '
-        '{ installedPackages(type: \$t) { $sel } }',
-        {'t': type},
-        const Duration(seconds: 20));
+      'query InstalledPkgs(\$t: PackageType!) '
+      '{ installedPackages(type: \$t) { $sel } }',
+      {'t': type},
+      const Duration(seconds: 20),
+    );
     final list = d?['installedPackages'];
     if (list is! List) return const [];
     return list.map((e) => ScraperPkg.fromJson(e)).toList();
@@ -834,10 +886,11 @@ class StashApi {
     final sel = await _pkgSelection(_pkgAvailableTypes);
     final type = await packageTypeScraper();
     final d = await query(
-        'query AvailablePkgs(\$t: PackageType!, \$s: String!) '
-        '{ availablePackages(type: \$t, source: \$s) { $sel } }',
-        {'t': type, 's': source.trim()},
-        const Duration(seconds: 60));
+      'query AvailablePkgs(\$t: PackageType!, \$s: String!) '
+      '{ availablePackages(type: \$t, source: \$s) { $sel } }',
+      {'t': type, 's': source.trim()},
+      const Duration(seconds: 60),
+    );
     final list = d?['availablePackages'];
     if (list is! List) return const [];
     return list.map((e) => ScraperPkg.fromJson(e)).toList();
@@ -845,8 +898,7 @@ class StashApi {
 
   /// 安装（或重装以更新）削刮器包，返回后台任务 id（可能为空）。
   /// 注意 specs 为空是「什么都不装」，不是「装全部」。
-  Future<String> installPackages(
-      List<Map<String, String>> specs) async {
+  Future<String> installPackages(List<Map<String, String>> specs) async {
     if (specs.isEmpty) return '';
     final fields = await mutationFields();
     if (!fields.contains('installPackages')) {
@@ -856,23 +908,26 @@ class StashApi {
     final key = inp.contains('source_url')
         ? 'source_url'
         : (inp.contains('sourceURL') || inp.isEmpty)
-            ? 'sourceURL'
-            : '';
+        ? 'sourceURL'
+        : '';
     final type = await packageTypeScraper();
     final vars = specs
-        .map((e) => <String, String>{
-              'id': e['id'] ?? '',
-              if (key.isNotEmpty && (e['source'] ?? '').isNotEmpty)
-                key: e['source']!,
-            })
+        .map(
+          (e) => <String, String>{
+            'id': e['id'] ?? '',
+            if (key.isNotEmpty && (e['source'] ?? '').isNotEmpty)
+              key: e['source']!,
+          },
+        )
         .where((e) => (e['id'] ?? '').isNotEmpty)
         .toList();
     if (vars.isEmpty) return '';
     final d = await query(
-        'mutation InstallPkgs(\$t: PackageType!, \$p: [PackageSpecInput!]!) '
-        '{ installPackages(type: \$t, packages: \$p) }',
-        {'t': type, 'p': vars},
-        const Duration(seconds: 30));
+      'mutation InstallPkgs(\$t: PackageType!, \$p: [PackageSpecInput!]!) '
+      '{ installPackages(type: \$t, packages: \$p) }',
+      {'t': type, 'p': vars},
+      const Duration(seconds: 30),
+    );
     final v = d?['installPackages'];
     return v is String ? v : '';
   }
@@ -883,8 +938,11 @@ class StashApi {
     if (!fields.contains('reloadScrapers')) {
       throw ApiException(tr('当前 Stash 版本不支持重新加载削刮器'));
     }
-    await query('mutation { reloadScrapers }', null,
-        const Duration(seconds: 30));
+    await query(
+      'mutation { reloadScrapers }',
+      null,
+      const Duration(seconds: 30),
+    );
   }
 
   /// 按 id 找后台任务；队列里查不到该 id 视为已结束（返回 null）。
@@ -905,17 +963,21 @@ class StashApi {
 
   Future<List<dynamic>> _jobQueueFull() async {
     final data = await query(
-        'query { jobQueue { id status progress description error } }',
-        null,
-        const Duration(seconds: 15));
+      'query { jobQueue { id status progress description error } }',
+      null,
+      const Duration(seconds: 15),
+    );
     final list = data?['jobQueue'];
     return list is List ? list : [];
   }
 
   Future<List<dynamic>> _jobQueueLite() async {
     try {
-      final data = await query('query { jobQueue { id status description } }',
-          null, const Duration(seconds: 15));
+      final data = await query(
+        'query { jobQueue { id status description } }',
+        null,
+        const Duration(seconds: 15),
+      );
       final list = data?['jobQueue'];
       return list is List ? list : [];
     } catch (_) {
@@ -940,7 +1002,8 @@ class StashApi {
     String direction = 'DESC',
     Map<String, dynamic>? sceneFilter,
   }) async {
-    const gq = '''
+    const gq =
+        '''
       query FindScenes(\$filter: FindFilterType!, \$sf: SceneFilterType) {
         findScenes(filter: \$filter, scene_filter: \$sf) {
           count
@@ -1046,12 +1109,19 @@ class StashApi {
     final start = (page - 1) * perPage;
     final items = start >= total
         ? <Scene>[]
-        : all.sublist(start, (start + perPage) > total ? total : start + perPage);
+        : all.sublist(
+            start,
+            (start + perPage) > total ? total : start + perPage,
+          );
     return FindResult<Scene>(count: total, items: items);
   }
 
   /// 客户端排序（合并搜索用），空日期/空值永远排最后。
-  static void _sortScenesClient(List<Scene> list, String sort, String direction) {
+  static void _sortScenesClient(
+    List<Scene> list,
+    String sort,
+    String direction,
+  ) {
     int cmp(Scene a, Scene b) {
       switch (sort) {
         case 'title':
@@ -1132,13 +1202,41 @@ class StashApi {
 
   /// 演员完整档案想要的字段（Stash 0.31.1 `Performer`）。
   static const _performerWantFields = <String>[
-    'id', 'name', 'disambiguation', 'alias_list', 'image_path', 'gender',
-    'birthdate', 'death_date', 'ethnicity', 'country', 'eye_color',
-    'hair_color', 'height_cm', 'weight', 'measurements', 'fake_tits',
-    'penis_length', 'circumcised', 'career_start', 'career_end',
-    'career_length', 'tattoos', 'piercings', 'urls', 'details', 'rating100',
-    'favorite', 'ignore_auto_tag', 'scene_count', 'image_count',
-    'gallery_count', 'group_count', 'o_counter', 'created_at', 'updated_at',
+    'id',
+    'name',
+    'disambiguation',
+    'alias_list',
+    'image_path',
+    'gender',
+    'birthdate',
+    'death_date',
+    'ethnicity',
+    'country',
+    'eye_color',
+    'hair_color',
+    'height_cm',
+    'weight',
+    'measurements',
+    'fake_tits',
+    'penis_length',
+    'circumcised',
+    'career_start',
+    'career_end',
+    'career_length',
+    'tattoos',
+    'piercings',
+    'urls',
+    'details',
+    'rating100',
+    'favorite',
+    'ignore_auto_tag',
+    'scene_count',
+    'image_count',
+    'gallery_count',
+    'group_count',
+    'o_counter',
+    'created_at',
+    'updated_at',
   ];
 
   static Set<String>? _performerFieldCache;
@@ -1149,7 +1247,9 @@ class StashApi {
     if (cached != null) return cached;
     var out = const <String>{};
     try {
-      final d = await query('query { __type(name: "Performer") { fields { name } } }');
+      final d = await query(
+        'query { __type(name: "Performer") { fields { name } } }',
+      );
       final fs = d?['__type']?['fields'];
       if (fs is List) {
         out = fs
@@ -1169,17 +1269,29 @@ class StashApi {
         : _performerWantFields.where((f) => have.contains(f)).toList();
     final selection = fields.join(' ');
     final d = await query(
-        'query FindPerformer(\$id: ID!) { findPerformer(id: \$id) { $selection tags { id name } } }',
-        {'id': id});
+      'query FindPerformer(\$id: ID!) { findPerformer(id: \$id) { $selection tags { id name } } }',
+      {'id': id},
+    );
     final p = d?['findPerformer'];
     return p == null ? null : Performer.fromJson(p);
   }
 
   /// findStudio 需要的标量字段；老服务器缺字段时按 introspect 结果裁剪。
   static const _studioWantFields = <String>[
-    'id', 'name', 'image_path', 'rating100', 'scene_count', 'image_count',
-    'performer_count', 'favorite', 'details', 'urls', 'aliases',
-    'ignore_auto_tag', 'created_at', 'updated_at',
+    'id',
+    'name',
+    'image_path',
+    'rating100',
+    'scene_count',
+    'image_count',
+    'performer_count',
+    'favorite',
+    'details',
+    'urls',
+    'aliases',
+    'ignore_auto_tag',
+    'created_at',
+    'updated_at',
   ];
 
   static Set<String>? _studioFieldCache;
@@ -1189,7 +1301,9 @@ class StashApi {
     if (cached != null) return cached;
     var out = const <String>{};
     try {
-      final d = await query('query { __type(name: "Studio") { fields { name } } }');
+      final d = await query(
+        'query { __type(name: "Studio") { fields { name } } }',
+      );
       final fs = d?['__type']?['fields'];
       if (fs is List) {
         out = fs
@@ -1207,8 +1321,11 @@ class StashApi {
     final fields = have.isEmpty
         ? _studioWantFields
         : _studioWantFields.where((f) => have.contains(f)).toList();
-    final extraTags = have.isEmpty || have.contains('tags') ? 'tags { id name }' : '';
-    final q = '''
+    final extraTags = have.isEmpty || have.contains('tags')
+        ? 'tags { id name }'
+        : '';
+    final q =
+        '''
       query FindStudio(\$id: ID!) {
         findStudio(id: \$id) {
           ${fields.join(' ')}
@@ -1310,7 +1427,8 @@ class StashApi {
     String sort = 'name',
     String direction = 'ASC',
   }) async {
-    const gq = '''
+    const gq =
+        '''
       query FindGroups(\$filter: FindFilterType!) {
         findGroups(filter: \$filter) {
           count
@@ -1334,13 +1452,66 @@ class StashApi {
   }
 
   Future<Group?> findGroup(String id) async {
-    const gq = '''
+    const gq =
+        '''
       query FindGroup(\$id: ID!) {
         findGroup(id: \$id) { $_groupFields }
       }''';
     final d = await query(gq, {'id': id});
     final g = d?['findGroup'];
     return g == null ? null : Group.fromJson(g);
+  }
+
+  /// 新建集合。成员短片不在创建时指定，需从短片侧写入。
+  Future<Group> createGroup(String name, [Map<String, dynamic>? extra]) async {
+    const m = '''
+      mutation GroupCreate(\$input: GroupCreateInput!) {
+        groupCreate(input: \$input) { id name }
+      }''';
+    final d = await query(m, {
+      'input': {'name': name, ...?extra},
+    });
+    final g = d?['groupCreate'];
+    if (g == null) throw ApiException(tr('groupCreate 失败'));
+    return Group.fromJson(g);
+  }
+
+  /// 短片的集合成员关系：scene_id -> { group_id: scene_index }。
+  /// 集合成员存在短片侧，写入时必须带上原有集合，否则会被整体覆盖。
+  Future<Map<String, Map<String, int?>>> sceneGroups(
+    List<String> sceneIds,
+  ) async {
+    if (sceneIds.isEmpty) return const {};
+    const sq = '''
+      query SceneGroups(\$ids: [ID!]!) {
+        findScenes(ids: \$ids) {
+          scenes { id groups { scene_index group { id } } }
+        }
+      }''';
+    final d = await query(sq, {'ids': sceneIds});
+    final out = <String, Map<String, int?>>{};
+    final scenes = d?['findScenes']?['scenes'];
+    if (scenes is! List) return out;
+    for (final raw in scenes) {
+      if (raw is! Map) continue;
+      final sid = raw['id']?.toString();
+      if (sid == null) continue;
+      final members = <String, int?>{};
+      final groups = raw['groups'];
+      if (groups is List) {
+        for (final g in groups) {
+          if (g is! Map) continue;
+          final group = g['group'];
+          final gid = group is Map ? group['id']?.toString() : null;
+          if (gid == null) continue;
+          members[gid] = g['scene_index'] is int
+              ? g['scene_index'] as int
+              : null;
+        }
+      }
+      out[sid] = members;
+    }
+    return out;
   }
 
   // ---------- 削刮 ----------
@@ -1358,8 +1529,11 @@ class StashApi {
     measurements fake_tits tattoos piercings career_start career_end details urls images tags { stored_id name }''';
 
   Future<List<ScrapedScene>> scrapeSceneFragment(
-      Map<String, dynamic> source, String sceneId) async {
-    const gq = '''
+    Map<String, dynamic> source,
+    String sceneId,
+  ) async {
+    const gq =
+        '''
       query ScrapeSingleScene(\$source: ScraperSourceInput!, \$input: ScrapeSingleSceneInput!) {
         scrapeSingleScene(source: \$source, input: \$input) { $_sceneSelection }
       }''';
@@ -1376,8 +1550,11 @@ class StashApi {
   }
 
   Future<List<ScrapedScene>> scrapeSceneByName(
-      Map<String, dynamic> source, String term) async {
-    const gq = '''
+    Map<String, dynamic> source,
+    String term,
+  ) async {
+    const gq =
+        '''
       query ScrapeSingleScene(\$source: ScraperSourceInput!, \$input: ScrapeSingleSceneInput!) {
         scrapeSingleScene(source: \$source, input: \$input) { $_sceneSelection }
       }''';
@@ -1394,7 +1571,8 @@ class StashApi {
   }
 
   Future<List<ScrapedScene>> scrapeSceneUrl(String url) async {
-    const gq = '''
+    const gq =
+        '''
       query ScrapeSceneURL(\$url: String!) {
         scrapeSceneURL(url: \$url) { $_sceneSelection }
       }''';
@@ -1407,8 +1585,11 @@ class StashApi {
   /// 只支持 performer_input（FRAGMENT）与 query（NAME），不支持 performer_id
   ///（直接返回 ErrNotImplemented）。故调用方先取本地演员数据构造 performer_input。
   Future<List<ScrapedPerformer>> scrapePerformerFragment(
-      Map<String, dynamic> source, Map<String, dynamic> performerInput) async {
-    const gq = '''
+    Map<String, dynamic> source,
+    Map<String, dynamic> performerInput,
+  ) async {
+    const gq =
+        '''
       query ScrapeSinglePerformer(\$source: ScraperSourceInput!, \$input: ScrapeSinglePerformerInput!) {
         scrapeSinglePerformer(source: \$source, input: \$input) { $_performerSelection }
       }''';
@@ -1425,8 +1606,11 @@ class StashApi {
   }
 
   Future<List<ScrapedPerformer>> scrapePerformerByName(
-      Map<String, dynamic> source, String term) async {
-    const gq = '''
+    Map<String, dynamic> source,
+    String term,
+  ) async {
+    const gq =
+        '''
       query ScrapeSinglePerformer(\$source: ScraperSourceInput!, \$input: ScrapeSinglePerformerInput!) {
         scrapeSinglePerformer(source: \$source, input: \$input) { $_performerSelection }
       }''';
@@ -1443,7 +1627,8 @@ class StashApi {
   }
 
   Future<List<ScrapedPerformer>> scrapePerformerUrl(String url) async {
-    const gq = '''
+    const gq =
+        '''
       query ScrapePerformerURL(\$url: String!) {
         scrapePerformerURL(url: \$url) { $_performerSelection }
       }''';
@@ -1453,7 +1638,9 @@ class StashApi {
   }
 
   Future<ScrapedStudio?> scrapeStudioByName(
-      Map<String, dynamic> source, String term) async {
+    Map<String, dynamic> source,
+    String term,
+  ) async {
     const gq = '''
       query ScrapeSingleStudio(\$source: ScraperSourceInput!, \$input: ScrapeSingleStudioInput!) {
         scrapeSingleStudio(source: \$source, input: \$input) { stored_id name urls image }
@@ -1475,10 +1662,28 @@ class StashApi {
     if (d?['sceneUpdate'] == null) throw ApiException(tr('sceneUpdate 失败'));
   }
 
+  /// 批量写多部短片。标签/演员/集合用 BulkUpdateIds（SET/ADD/REMOVE），
+  /// 其余字段（organized、rating100、studio_id）直接给值。
+  Future<void> bulkUpdateScenes(
+    List<String> ids,
+    Map<String, dynamic> fields, {
+    Duration timeout = const Duration(seconds: 60),
+  }) async {
+    if (ids.isEmpty) return;
+    const m =
+        'mutation BulkSceneUpdate(\$input: BulkSceneUpdateInput!) '
+        '{ bulkSceneUpdate(input: \$input) { id } }';
+    // 空结果集时服务端返回 null 且无错误，故不以返回值判成败，只看是否抛出。
+    await query(m, {
+      'input': {'ids': ids, ...fields},
+    }, timeout);
+  }
+
   /// 标记短片已看一次（Stash 0.31 的 sceneAddPlay，省略 times 即按当前时间记一条）。
   /// 返回服务端最新的已看次数。
   Future<int> markScenePlayed(String id) async {
-    const m = 'mutation SceneAddPlay(\$id: ID!) '
+    const m =
+        'mutation SceneAddPlay(\$id: ID!) '
         '{ sceneAddPlay(id: \$id) { count } }';
     final d = await query(m, {'id': id});
     final v = d?['sceneAddPlay'];
@@ -1488,7 +1693,8 @@ class StashApi {
 
   /// 清零短片的已看次数（Stash 0.31 的 sceneResetPlayCount）。
   Future<void> resetScenePlayCount(String id) async {
-    const m = 'mutation SceneResetPlayCount(\$id: ID!) '
+    const m =
+        'mutation SceneResetPlayCount(\$id: ID!) '
         '{ sceneResetPlayCount(id: \$id) }';
     final d = await query(m, {'id': id});
     if (d == null || d['sceneResetPlayCount'] == null) {
@@ -1516,7 +1722,8 @@ class StashApi {
     const m =
         'mutation UpdatePerformer(\$input: PerformerUpdateInput!) { performerUpdate(input: \$input) { id } }';
     final d = await query(m, {'input': input});
-    if (d?['performerUpdate'] == null) throw ApiException(tr('performerUpdate 失败'));
+    if (d?['performerUpdate'] == null)
+      throw ApiException(tr('performerUpdate 失败'));
   }
 
   Future<void> updateStudio(Map<String, dynamic> input) async {
@@ -1531,7 +1738,8 @@ class StashApi {
         'mutation CreatePerformer(\$input: PerformerCreateInput!) { performerCreate(input: \$input) { id } }';
     final d = await query(m, {'input': input});
     final v = d?['performerCreate'];
-    if (v == null || v['id'] == null) throw ApiException(tr('performerCreate 失败'));
+    if (v == null || v['id'] == null)
+      throw ApiException(tr('performerCreate 失败'));
     return v['id'].toString();
   }
 
@@ -1540,43 +1748,56 @@ class StashApi {
     final m = fields.contains('tagCreate') ? 'tagCreate' : 'createTag';
     final q =
         'mutation CreateTag(\$input: TagCreateInput!) { $m(input: \$input) { id } }';
-    final d = await query(q, {'input': {'name': name}});
+    final d = await query(q, {
+      'input': {'name': name},
+    });
     final v = d?[m];
-    if (v == null || v['id'] == null) throw ApiException(tr('{m} 失败', {'m': m}));
+    if (v == null || v['id'] == null)
+      throw ApiException(tr('{m} 失败', {'m': m}));
     return v['id'].toString();
   }
 
-  Future<String> createStudio(String name, [Map<String, dynamic>? extra]) async {
+  Future<String> createStudio(
+    String name, [
+    Map<String, dynamic>? extra,
+  ]) async {
     final fields = await mutationFields();
     final m = fields.contains('studioCreate') ? 'studioCreate' : 'createStudio';
     final q =
         'mutation CreateStudio(\$input: StudioCreateInput!) { $m(input: \$input) { id } }';
     final d = await query(q, {
-      'input': {'name': name, ...?extra}
+      'input': {'name': name, ...?extra},
     });
     final v = d?[m];
-    if (v == null || v['id'] == null) throw ApiException(tr('{m} 失败', {'m': m}));
+    if (v == null || v['id'] == null)
+      throw ApiException(tr('{m} 失败', {'m': m}));
     return v['id'].toString();
   }
 
   /// 删除演员（0.31+ mutation 名为 performerDestroy，兼容旧版 destroyPerformer）。
   Future<void> destroyPerformer(String id) async {
     final fields = await mutationFields();
-    final m =
-        fields.contains('performerDestroy') ? 'performerDestroy' : 'destroyPerformer';
+    final m = fields.contains('performerDestroy')
+        ? 'performerDestroy'
+        : 'destroyPerformer';
     final q =
         'mutation DestroyPerformer(\$input: PerformerDestroyInput!) { $m(input: \$input) }';
-    await query(q, {'input': {'id': id}});
+    await query(q, {
+      'input': {'id': id},
+    });
   }
 
   /// 删除工作室（0.31+ mutation 名为 studioDestroy，兼容旧版 destroyStudio）。
   Future<void> destroyStudio(String id) async {
     final fields = await mutationFields();
-    final m =
-        fields.contains('studioDestroy') ? 'studioDestroy' : 'destroyStudio';
+    final m = fields.contains('studioDestroy')
+        ? 'studioDestroy'
+        : 'destroyStudio';
     final q =
         'mutation DestroyStudio(\$input: StudioDestroyInput!) { $m(input: \$input) }';
-    await query(q, {'input': {'id': id}});
+    await query(q, {
+      'input': {'id': id},
+    });
   }
 
   /// 删除短片（0.31+ mutation 名为 sceneDestroy，兼容旧版 destroyScene）。
@@ -1588,16 +1809,20 @@ class StashApi {
   }) async {
     final fields = await mutationFields();
     final m = fields.contains('sceneDestroy') ? 'sceneDestroy' : 'destroyScene';
-    final q = '''
+    final q =
+        '''
       mutation DestroyScene(\$id: ID!, \$delete_file: Boolean, \$delete_generated: Boolean) {
         $m(input: { id: \$id, delete_file: \$delete_file, delete_generated: \$delete_generated })
       }''';
-    await query(q, {'id': id, 'delete_file': deleteFile, 'delete_generated': deleteGenerated});
+    await query(q, {
+      'id': id,
+      'delete_file': deleteFile,
+      'delete_generated': deleteGenerated,
+    });
   }
 
   /// 短片合并（服务端原生 sceneMerge）。
-  Future<void> mergeScenes(
-      List<String> sourceIds, String destinationId) async {
+  Future<void> mergeScenes(List<String> sourceIds, String destinationId) async {
     const m =
         'mutation SceneMerge(\$input: SceneMergeInput!) { sceneMerge(input: \$input) { id } }';
     final d = await query(m, {
@@ -1606,7 +1831,7 @@ class StashApi {
         'destination': destinationId,
         'play_history': true,
         'o_history': true,
-      }
+      },
     });
     if (d?['sceneMerge'] == null) throw ApiException(tr('sceneMerge 失败'));
   }
@@ -1614,13 +1839,16 @@ class StashApi {
   /// 演员合并：把 sourceIds 的演员并入 destinationId（源条目删除，
   /// 相关短片/标签等归并到目标）。0.31.1 mutation: performerMerge。
   Future<void> mergePerformers(
-      List<String> sourceIds, String destinationId) async {
+    List<String> sourceIds,
+    String destinationId,
+  ) async {
     const m =
         'mutation PerformerMerge(\$input: PerformerMergeInput!) { performerMerge(input: \$input) { id } }';
     final d = await query(m, {
-      'input': {'source': sourceIds, 'destination': destinationId}
+      'input': {'source': sourceIds, 'destination': destinationId},
     });
-    if (d?['performerMerge'] == null) throw ApiException(tr('performerMerge 失败'));
+    if (d?['performerMerge'] == null)
+      throw ApiException(tr('performerMerge 失败'));
   }
 
   // ---------- 削刮结果写回 ----------
@@ -1642,22 +1870,60 @@ class StashApi {
     }
   }
 
-  Future<String> _resolvePerformerId(ScrapedPerformer p) async {
+  /// 外部削刮器通常只给名字、stored_id 为空；库里已有同名实体时必须复用，
+  /// 直接 create 会被服务端以「已存在」拒绝（name 有 UNIQUE 约束）。
+  /// 返回 null 表示无法解析，调用方跳过该条目而不是让整次写回失败。
+  Future<String?> _resolvePerformerId(ScrapedPerformer p) async {
     if (p.storedId.isNotEmpty) return p.storedId;
-    if (p.name.isEmpty) throw ApiException(tr('削刮演员无名称'));
-    return createPerformer({'name': p.name});
+    final name = p.name.trim();
+    if (name.isEmpty) return null;
+    final found = await _findPerformerIdByName(name);
+    if (found != null) return found;
+    try {
+      return await createPerformer({'name': name});
+    } catch (_) {
+      return _findPerformerIdByName(name);
+    }
   }
 
-  Future<String> _resolveTagId(ScrapedTag t) async {
+  Future<String?> _findPerformerIdByName(String name) async {
+    try {
+      final r = await findPerformers(page: 1, perPage: 20, q: name);
+      final key = name.toLowerCase();
+      for (final p in r.items) {
+        if (p.name.trim().toLowerCase() == key) return p.id;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<String?> _resolveTagId(ScrapedTag t) async {
     if (t.storedId.isNotEmpty) return t.storedId;
-    if (t.name.isEmpty) throw ApiException(tr('削刮标签无名称'));
-    return createTag(t.name);
+    final name = t.name.trim();
+    if (name.isEmpty) return null;
+    final found = await findTagsByName(name);
+    if (found.isNotEmpty) return found.first.id;
+    try {
+      return await createTag(name);
+    } catch (_) {
+      // 并发创建或名称匹配规则有差异：再查一次，仍查不到就跳过这个标签。
+      final again = await findTagsByName(name);
+      return again.isEmpty ? null : again.first.id;
+    }
   }
 
-  Future<String> _resolveStudioId(ScrapedStudio s) async {
+  Future<String?> _resolveStudioId(ScrapedStudio s) async {
     if (s.storedId.isNotEmpty) return s.storedId;
-    if (s.name.isEmpty) throw ApiException(tr('削刮工作室无名称'));
-    return createStudio(s.name);
+    final name = s.name.trim();
+    if (name.isEmpty) return null;
+    final found = await findStudiosByName(name);
+    if (found.isNotEmpty) return found.first.id;
+    try {
+      return await createStudio(name);
+    } catch (_) {
+      final again = await findStudiosByName(name);
+      return again.isEmpty ? null : again.first.id;
+    }
   }
 
   /// 写回削刮结果：仅写非空字段；库内不存在自动创建；可选图片。
@@ -1665,8 +1931,11 @@ class StashApi {
   /// 原工作室（与演员"默认保留原名"同理），不覆盖 studio_id。
   /// 标签一律取并集：本地已保存的 tag_ids 不会被削刮结果覆盖。
   Future<int> applyScrapedScene(
-      ScrapedScene s, String targetId, bool includeImage,
-      {bool keepOriginalStudio = true}) async {
+    ScrapedScene s,
+    String targetId,
+    bool includeImage, {
+    bool keepOriginalStudio = true,
+  }) async {
     final input = <String, dynamic>{'id': targetId};
     var changed = 0;
     if (s.title.isNotEmpty) {
@@ -1693,14 +1962,18 @@ class StashApi {
     if (s.studio != null) {
       final writeStudio = !(keepOriginalStudio && cur?.studio != null);
       if (writeStudio) {
-        input['studio_id'] = await _resolveStudioId(s.studio!);
-        changed++;
+        final studioId = await _resolveStudioId(s.studio!);
+        if (studioId != null) {
+          input['studio_id'] = studioId;
+          changed++;
+        }
       }
     }
     if (s.performers.isNotEmpty) {
       final ids = <String>[];
       for (final p in s.performers) {
-        ids.add(await _resolvePerformerId(p));
+        final id = await _resolvePerformerId(p);
+        if (id != null) ids.add(id);
       }
       if (ids.isNotEmpty) {
         input['performer_ids'] = ids;
@@ -1713,7 +1986,8 @@ class StashApi {
         ids.addAll(cur.tags.map((t) => t.id));
       }
       for (final t in s.tags) {
-        ids.add(await _resolveTagId(t));
+        final id = await _resolveTagId(t);
+        if (id != null) ids.add(id);
       }
       if (ids.isNotEmpty) {
         input['tag_ids'] = ids.toList();
@@ -1738,8 +2012,12 @@ class StashApi {
   /// 写回演员削刮结果（全部字段）。
   /// 标签一律取并集：本地已保存的 tag_ids 不会被削刮结果覆盖。
   Future<int> applyScrapedPerformer(
-      ScrapedPerformer p, String targetId, bool includeImage,
-      {bool keepOriginalName = true, bool writeName = true}) async {
+    ScrapedPerformer p,
+    String targetId,
+    bool includeImage, {
+    bool keepOriginalName = true,
+    bool writeName = true,
+  }) async {
     final input = <String, dynamic>{'id': targetId};
     var changed = 0;
     void put(String key, String v) {
@@ -1822,7 +2100,8 @@ class StashApi {
         ids.addAll(local.tags.map((t) => t.id));
       }
       for (final t in p.tags) {
-        ids.add(await _resolveTagId(t));
+        final id = await _resolveTagId(t);
+        if (id != null) ids.add(id);
       }
       if (ids.isNotEmpty) {
         input['tag_ids'] = ids.toList();
@@ -1841,7 +2120,10 @@ class StashApi {
   }
 
   Future<int> applyScrapedStudio(
-      ScrapedStudio s, String targetId, bool includeImage) async {
+    ScrapedStudio s,
+    String targetId,
+    bool includeImage,
+  ) async {
     final input = <String, dynamic>{'id': targetId};
     var changed = 0;
     if (s.urls.isNotEmpty) {

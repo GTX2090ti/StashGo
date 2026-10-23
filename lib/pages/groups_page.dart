@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../settings/app_settings.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
+import 'group_create_page.dart';
 import 'group_detail_page.dart';
 import '../l10n/l10n.dart';
 
@@ -128,25 +129,29 @@ class _GroupsPageState extends State<GroupsPage> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-                child: Row(children: [
-                  Expanded(
-                    child:
-                        Text(tr('排序方式'), style: theme.textTheme.titleMedium),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => Navigator.pop(ctx, 'toggle_dir'),
-                    icon: Icon(
-                      _direction == 'DESC'
-                          ? Icons.arrow_downward
-                          : Icons.arrow_upward,
-                      size: 16,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        tr('排序方式'),
+                        style: theme.textTheme.titleMedium,
+                      ),
                     ),
-                    label: Text(
-                      _direction == 'DESC' ? tr('从新到旧') : tr('从旧到新'),
-                      style: const TextStyle(fontSize: 12),
+                    TextButton.icon(
+                      onPressed: () => Navigator.pop(ctx, 'toggle_dir'),
+                      icon: Icon(
+                        _direction == 'DESC'
+                            ? Icons.arrow_downward
+                            : Icons.arrow_upward,
+                        size: 16,
+                      ),
+                      label: Text(
+                        _direction == 'DESC' ? tr('从新到旧') : tr('从旧到新'),
+                        style: const TextStyle(fontSize: 12),
+                      ),
                     ),
-                  ),
-                ]),
+                  ],
+                ),
               ),
               const Divider(height: 1),
               Flexible(
@@ -158,8 +163,11 @@ class _GroupsPageState extends State<GroupsPage> {
                         dense: true,
                         title: Text(l, style: const TextStyle(fontSize: 13)),
                         trailing: s == _sort
-                            ? Icon(Icons.check,
-                                size: 18, color: theme.colorScheme.primary)
+                            ? Icon(
+                                Icons.check,
+                                size: 18,
+                                color: theme.colorScheme.primary,
+                              )
                             : null,
                         onTap: () => Navigator.pop(ctx, s),
                       ),
@@ -180,6 +188,15 @@ class _GroupsPageState extends State<GroupsPage> {
     _reload();
   }
 
+  Future<void> _openCreate() async {
+    final id = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const GroupCreatePage()),
+    );
+    if (id == null || !mounted) return;
+    _reload();
+  }
+
   Future<void> _loadMore() async {
     if (_loadingMore || !_hasMore) return;
     final next = _page + 1;
@@ -190,11 +207,12 @@ class _GroupsPageState extends State<GroupsPage> {
     _error = '';
     try {
       final r = await buildApi().findGroups(
-          page: next,
-          perPage: _perPage,
-          q: _query,
-          sort: _sort,
-          direction: _direction);
+        page: next,
+        perPage: _perPage,
+        q: _query,
+        sort: _sort,
+        direction: _direction,
+      );
       if (!mounted) return;
       setState(() {
         _total = r.count;
@@ -235,8 +253,9 @@ class _GroupsPageState extends State<GroupsPage> {
         padding: const EdgeInsets.symmetric(vertical: 18),
         child: Text(
           _error.isNotEmpty ? tr('加载失败，上拉重试') : tr('已经到底了'),
-          style: theme.textTheme.bodySmall
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
       ),
     );
@@ -245,120 +264,146 @@ class _GroupsPageState extends State<GroupsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final body = Column(children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-        child: Row(children: [
-          Expanded(
-            child: TextField(
-              controller: _searchCtrl,
-              style: const TextStyle(fontSize: 13),
-              textInputAction: TextInputAction.search,
-              contextMenuBuilder: zhContextMenuBuilder,
-              onChanged: (v) => setState(() => _query = v),
-              onSubmitted: (_) => _reload(),
-              decoration: InputDecoration(
-                hintText: tr('搜索集合'),
-                isDense: true,
-                suffixIcon: _query.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: tr('清空'),
-                        icon: const Icon(Icons.clear, size: 16),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          setState(() => _query = '');
-                          _reload();
-                        },
-                      ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          SizedBox(
-            height: 30,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10)),
-              onPressed: _reload,
-              child: Text(tr('搜索'), style: const TextStyle(fontSize: 12)),
-            ),
-          ),
-          const SizedBox(width: 6),
-          SizedBox(
-            height: 30,
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8)),
-              onPressed: _openSortSheet,
-              child: Text(_sortLabel,
-                  style: const TextStyle(fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
-            ),
-          ),
-        ]),
-      ),
-      Expanded(
-        child: _items.isEmpty && !_loadingMore
-            ? StatusView(
-                loading: _loading,
-                empty: _error.isNotEmpty ? _error : tr('没有集合'),
-                error: _error,
-                onRetry: _reload)
-            : RefreshIndicator(
-                onRefresh: _reload,
-                child: ListView.builder(
-                  key: const PageStorageKey('group_list'),
-                  controller: _scroll,
-                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-                  itemCount:
-                      _items.length + ((_hasMore || _loadingMore) ? 1 : 0),
-                  itemBuilder: (_, i) {
-                    if (i >= _items.length) return _footer();
-                    final g = _items[i];
-                    final meta = <String>[
-                      if (g.date.isNotEmpty) g.date,
-                      if (g.studio != null && g.studio!.name.isNotEmpty)
-                        g.studio!.name,
-                      tr('{count} 个短片', {'count': g.sceneCount}),
-                    ].join(' · ');
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 3),
-                      child: ListTile(
-                        leading: SizedBox(
-                          width: 56,
-                          height: 56,
-                          child: AuthImage(
-                            rawPath: g.frontImagePath,
-                            radius: 8,
-                            width: 56,
-                            height: 56,
-                            fallbackIcon: Icons.collections_bookmark_outlined,
+    final body = Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchCtrl,
+                  style: const TextStyle(fontSize: 13),
+                  textInputAction: TextInputAction.search,
+                  contextMenuBuilder: zhContextMenuBuilder,
+                  onChanged: (v) => setState(() => _query = v),
+                  onSubmitted: (_) => _reload(),
+                  decoration: InputDecoration(
+                    hintText: tr('搜索集合'),
+                    isDense: true,
+                    suffixIcon: _query.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: tr('清空'),
+                            icon: const Icon(Icons.clear, size: 16),
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              setState(() => _query = '');
+                              _reload();
+                            },
                           ),
-                        ),
-                        title: Text(g.name,
-                            maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Text(
-                          meta,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant),
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => GroupDetailPage(groupId: g.id)),
-                        ),
-                      ),
-                    );
-                  },
+                  ),
                 ),
               ),
-      ),
-    ]);
+              const SizedBox(width: 6),
+              SizedBox(
+                height: 30,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                  ),
+                  onPressed: _reload,
+                  child: Text(tr('搜索'), style: const TextStyle(fontSize: 12)),
+                ),
+              ),
+              const SizedBox(width: 6),
+              SizedBox(
+                height: 30,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  onPressed: _openSortSheet,
+                  child: Text(
+                    _sortLabel,
+                    style: const TextStyle(fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              SizedBox(
+                height: 30,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  onPressed: _openCreate,
+                  icon: const Icon(Icons.add, size: 15),
+                  label: Text(tr('添加'), style: const TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _items.isEmpty && !_loadingMore
+              ? StatusView(
+                  loading: _loading,
+                  empty: _error.isNotEmpty ? _error : tr('没有集合'),
+                  error: _error,
+                  onRetry: _reload,
+                )
+              : RefreshIndicator(
+                  onRefresh: _reload,
+                  child: ListView.builder(
+                    key: const PageStorageKey('group_list'),
+                    controller: _scroll,
+                    padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+                    itemCount:
+                        _items.length + ((_hasMore || _loadingMore) ? 1 : 0),
+                    itemBuilder: (_, i) {
+                      if (i >= _items.length) return _footer();
+                      final g = _items[i];
+                      final meta = <String>[
+                        if (g.date.isNotEmpty) g.date,
+                        if (g.studio != null && g.studio!.name.isNotEmpty)
+                          g.studio!.name,
+                        tr('{count} 个短片', {'count': g.sceneCount}),
+                      ].join(' · ');
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 3),
+                        child: ListTile(
+                          leading: SizedBox(
+                            width: 56,
+                            height: 56,
+                            child: AuthImage(
+                              rawPath: g.frontImagePath,
+                              radius: 8,
+                              width: 56,
+                              height: 56,
+                              fallbackIcon: Icons.collections_bookmark_outlined,
+                            ),
+                          ),
+                          title: Text(
+                            g.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            meta,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => GroupDetailPage(groupId: g.id),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+        ),
+      ],
+    );
 
     if (widget.embedded) return body;
     return Scaffold(

@@ -65,14 +65,11 @@ const Map<String, String> enStrings = {
   '关于': 'About',
   '关闭时只补缺失的素材': 'Only fill in missing assets when disabled',
   '内网': 'LAN',
-  '内网不可达，自动切换外网（{ms}ms）':
-      'LAN unreachable, switched to WAN ({ms}ms)',
+  '内网不可达，自动切换外网（{ms}ms）': 'LAN unreachable, switched to WAN ({ms}ms)',
   '内网与外网地址均不可达': 'Neither LAN nor WAN address is reachable',
-  '内网与外网地址均不可达（测速）':
-      'Neither LAN nor WAN address is reachable (speed test)',
+  '内网与外网地址均不可达（测速）': 'Neither LAN nor WAN address is reachable (speed test)',
   '内网地址': 'LAN address',
-  '内网实测可达，自动切换（{ms}ms）':
-      'LAN reachable, switched automatically ({ms}ms)',
+  '内网实测可达，自动切换（{ms}ms）': 'LAN reachable, switched automatically ({ms}ms)',
   '写回失败：{error}': 'Write failed: {error}',
   '出生与地区': 'Birth and location',
   '出生日期': 'Birthdate',
@@ -80,8 +77,7 @@ const Map<String, String> enStrings = {
   '出道年份': 'Debut year',
   '分组': 'Groups',
   '分辨率 ≥': 'Resolution ≥',
-  '切换到{slot}失败：该侧地址未配置':
-      'Failed to switch to {slot}: address not configured',
+  '切换到{slot}失败：该侧地址未配置': 'Failed to switch to {slot}: address not configured',
   '切换档案': 'Switch profile',
   '创建': 'Create',
   '创建失败：{error}': 'Create failed: {error}',
@@ -201,8 +197,7 @@ const Map<String, String> enStrings = {
   '工作室': 'Studios',
   '工作室 ({total})': 'Studios ({total})',
   '工作室介绍…': 'Studio description…',
-  '工作室削刮：通过 Stash-box 按名称匹配':
-      'Studio scrape: match by name via Stash-box',
+  '工作室削刮：通过 Stash-box 按名称匹配': 'Studio scrape: match by name via Stash-box',
   '工作室名称': 'Studio name',
   '工作室名称不能为空': 'Studio name cannot be empty',
   '工作室详情': 'Studio details',
@@ -229,13 +224,11 @@ const Map<String, String> enStrings = {
   '已经到底了': 'No more results',
   '已设为默认文件': 'Set as default file',
   '已重新加载削刮器': 'Scrapers reloaded',
-  '已锁定，自动选路不会覆盖':
-      'Locked; automatic routing will not override it',
+  '已锁定，自动选路不会覆盖': 'Locked; automatic routing will not override it',
   '年龄': 'Age',
   '应用': 'Apply',
   '应用中…': 'Applying…',
-  '应用图片（下载后转为 base64 写入）':
-      'Apply image (downloaded and written as base64)',
+  '应用图片（下载后转为 base64 写入）': 'Apply image (downloaded and written as base64)',
   '应用并写回': 'Apply and write back',
   '开始削刮': 'Start scraping',
   '开始扫描（全部文件夹）': 'Start scan (all folders)',
@@ -254,10 +247,8 @@ const Map<String, String> enStrings = {
   '性别': 'Gender',
   '恢复自动选择（优先内网）': 'Resume automatic selection (prefer LAN)',
   '感知哈希': 'Perceptual hash',
-  '所选短片都已含这些演员，无需添加':
-      'All selected scenes already include these performers',
-  '所选短片都已有工作室，无需设置':
-      'All selected scenes already have a studio',
+  '所选短片都已含这些演员，无需添加': 'All selected scenes already include these performers',
+  '所选短片都已有工作室，无需设置': 'All selected scenes already have a studio',
   '手动锁定当前地址': 'Manually lock the current address',
   '执行中': 'Running',
   '执行清理': 'Run cleanup',
@@ -265,8 +256,7 @@ const Map<String, String> enStrings = {
   '扫描 Stash 配置的媒体目录，把新增/变更的短片与图片入库。':
       'Scan the media folders configured in Stash and add new or changed scenes and images.',
   '扫描全部文件夹': 'Scan all folders',
-  '扫描已提交，可在下方任务列表查看进度':
-      'Scan submitted. Check progress in the task list below',
+  '扫描已提交，可在下方任务列表查看进度': 'Scan submitted. Check progress in the task list below',
   '扫描提交后请到 Stash 网页端查看进度。':
       'After submitting, check progress in the Stash web UI.',
   '扫描新短片与图片': 'Scan for new scenes and images',
@@ -275,14 +265,12 @@ const Map<String, String> enStrings = {
   '批量识别已提交，全部短片将按所选来源匹配':
       'Batch identify submitted. All scenes will be matched against the selected sources',
   '指定文件夹': 'Selected folders',
-  '按刮削源自动匹配短片元数据':
-      'Match scene metadata automatically from scraping sources',
+  '按刮削源自动匹配短片元数据': 'Match scene metadata automatically from scraping sources',
   '按勾选顺序匹配，第一个命中即采用（可多选）。':
       'Match in the selected order; the first hit wins (multi-select).',
   '按文件名自动匹配元数据；选择文件夹则只识别该目录内的短片。':
       'Match metadata by file name automatically; selecting folders limits identification to those folders.',
-  '按相似度查找重复短片并合并':
-      'Find and merge duplicate scenes by similarity',
+  '按相似度查找重复短片并合并': 'Find and merge duplicate scenes by similarity',
   '按路径规则把演员/工作室/标签自动关联到短片。':
       'Automatically link performers, studios and tags to scenes by path rules.',
   '换削刮器': 'Change scraper',
@@ -352,16 +340,14 @@ const Map<String, String> enStrings = {
   '未评分': 'Not rated',
   '未配置': 'Not configured',
   '未配置服务器': 'No server configured',
-  '本地存储不可用，设置不会持久化':
-      'Local storage unavailable; settings will not persist',
+  '本地存储不可用，设置不会持久化': 'Local storage unavailable; settings will not persist',
   '本地演员无名称，无法用名字搜索 Stash-box':
       'The local performer has no name, so Stash-box cannot be searched by name',
   '查找重复短片': 'Find duplicate scenes',
   '查看': 'View',
   '查看已安装削刮器包，从索引源搜索并安装':
       'View installed scraper packages and install from index sources',
-  '查看已安装插件及其任务/钩子':
-      'View installed plugins and their tasks/hooks',
+  '查看已安装插件及其任务/钩子': 'View installed plugins and their tasks/hooks',
   '查询失败：{error}': 'Query failed: {error}',
   '标签': 'Tags',
   '标签与本地已有标签取并集，不会覆盖已保存的标签。':
@@ -426,8 +412,7 @@ const Map<String, String> enStrings = {
   '演员详情': 'Performer details',
   '点击标签可移除': 'Tap a tag to remove it',
   '片段削刮': 'Fragment scrape',
-  '片段削刮：以当前条目的已有信息为上下文削刮':
-      'Fragment scrape: use the current item as context',
+  '片段削刮：以当前条目的已有信息为上下文削刮': 'Fragment scrape: use the current item as context',
   '片段预览': 'Fragment preview',
   '环切状态': 'Circumcision',
   '生成': 'Generate',
@@ -486,8 +471,7 @@ const Map<String, String> enStrings = {
   '编辑工作室': 'Edit studio',
   '编辑演员': 'Edit performer',
   '编辑短片': 'Edit scene',
-  '缩略图打码，长按可临时查看':
-      'Blur thumbnails; long-press to view temporarily',
+  '缩略图打码，长按可临时查看': 'Blur thumbnails; long-press to view temporarily',
   '网址': 'URL',
   '网络': 'Network',
   '网络日志': 'Network logs',
@@ -527,8 +511,7 @@ const Map<String, String> enStrings = {
   '请先勾选短片': 'Select scenes first',
   '请至少填写一个地址': 'Enter at least one address',
   '请至少选择一个识别来源': 'Select at least one identify source',
-  '请选择至少一个文件夹，或改为识别全部':
-      'Select at least one folder, or identify all',
+  '请选择至少一个文件夹，或改为识别全部': 'Select at least one folder, or identify all',
   '资料库': 'Library',
   '超时': 'Timeout',
   '距离越小越严格（0=完全相同的帧）；时长差限制文件时长接近程度。':
@@ -588,8 +571,7 @@ const Map<String, String> enStrings = {
   '预览清理': 'Preview cleanup',
   '预览缩略图': 'Preview thumbnails',
   '验证失败，请重试': 'Verification failed. Try again',
-  '验证您的身份以启用面容解锁':
-      'Verify your identity to enable Face ID lock',
+  '验证您的身份以启用面容解锁': 'Verify your identity to enable Face ID lock',
   '验证您的身份以解锁 Stash': 'Verify your identity to unlock Stash',
   '黑暗': 'Dark',
   '（无名称）': '(No name)',
@@ -605,10 +587,14 @@ const Map<String, String> enStrings = {
   '语言': 'Language',
   '页面渲染出错': 'Page render error',
   '页面渲染出错\n{error}': 'Page render error\n{error}',
-  '查询链路失败（{reason}），重建会话丢弃吊死连接': 'Query link failed ({reason}); rebuilding the session to drop hung connections',
-  '首次失败（{reason}），重建会话后重试成功': 'First attempt failed ({reason}); retry succeeded after rebuilding the session',
-  '将 {count} 个短片合并到「{title}」，合并后保留元数据（演员/标签/收藏），多余文件从库中移除。\n\n继续吗？': 'Merge {count} scenes into "{title}". Metadata (performers/tags/favorites) is kept and extra files are removed from the library.\n\nContinue?',
-  '从媒体库删除「{title}」？\n仅从库中移除记录，不删除磁盘文件。': 'Remove "{title}" from the library?\nOnly the library record is removed; files on disk are kept.',
+  '查询链路失败（{reason}），重建会话丢弃吊死连接':
+      'Query link failed ({reason}); rebuilding the session to drop hung connections',
+  '首次失败（{reason}），重建会话后重试成功':
+      'First attempt failed ({reason}); retry succeeded after rebuilding the session',
+  '将 {count} 个短片合并到「{title}」，合并后保留元数据（演员/标签/收藏），多余文件从库中移除。\n\n继续吗？':
+      'Merge {count} scenes into "{title}". Metadata (performers/tags/favorites) is kept and extra files are removed from the library.\n\nContinue?',
+  '从媒体库删除「{title}」？\n仅从库中移除记录，不删除磁盘文件。':
+      'Remove "{title}" from the library?\nOnly the library record is removed; files on disk are kept.',
   '发现 {count} 组疑似重复': 'Found {count} suspected duplicate groups',
   '重复组 {index}（{count} 个短片）': 'Duplicate group {index} ({count} scenes)',
   '批量识别已提交，共 {count} 个文件夹': 'Batch identify submitted for {count} folders',
@@ -622,7 +608,8 @@ const Map<String, String> enStrings = {
   '等 {count} 个': 'and {count} more',
   '{count} 项': '{count} items',
   '{count} 个': '{count}',
-  '确定删除「{name}」吗？\n该演员不会从已有短片中移除，但演员档案会被永久删除。': 'Delete "{name}"?\nThe performer is not removed from existing scenes, but the performer record is deleted permanently.',
+  '确定删除「{name}」吗？\n该演员不会从已有短片中移除，但演员档案会被永久删除。':
+      'Delete "{name}"?\nThe performer is not removed from existing scenes, but the performer record is deleted permanently.',
   '查看更多 {count} 个': 'Show {count} more',
   '服务器仅有旧字段：{value}': 'Server only has the legacy field: {value}',
   '选择标签（{count}）': 'Select tags ({count})',
@@ -631,7 +618,8 @@ const Map<String, String> enStrings = {
   '已选 {count} 个源演员': '{count} source performers selected',
   '合并 {count} 个演员到当前演员': 'Merge {count} performers into this performer',
   '插件 ({count})': 'Plugins ({count})',
-  '将清空该短片的简介、日期、链接、工作室、演员与标签，并把标题改为文件名「{name}」。\n评分、已看次数与封面不受影响。此操作无法撤销。': 'This clears the scene details, date, links, studio, performers and tags, and renames the title to the file name "{name}".\nRating, play count and cover are unaffected. This cannot be undone.',
+  '将清空该短片的简介、日期、链接、工作室、演员与标签，并把标题改为文件名「{name}」。\n评分、已看次数与封面不受影响。此操作无法撤销。':
+      'This clears the scene details, date, links, studio, performers and tags, and renames the title to the file name "{name}".\nRating, play count and cover are unaffected. This cannot be undone.',
   '已清除削刮，标题改为「{name}」': 'Scraped data cleared; title changed to "{name}"',
   '演员（{count}）': 'Performers ({count})',
   '标签（{count}）': 'Tags ({count})',
@@ -655,7 +643,8 @@ const Map<String, String> enStrings = {
   '削刮失败：{error}': 'Scraping failed: {error}',
   '演员：{names}': 'Performers: {names}',
   '标签：{names}': 'Tags: {names}',
-  '已写入 {count} 个字段（名字与库中已有演员冲突，未写入）': 'Wrote {count} fields (skipped name: conflicts with an existing performer)',
+  '已写入 {count} 个字段（名字与库中已有演员冲突，未写入）':
+      'Wrote {count} fields (skipped name: conflicts with an existing performer)',
   '已写入 {count} 个字段': 'Wrote {count} fields',
   '将写入 {count} 个字段': 'Will write {count} fields',
   '输入{kind}名称关键词': 'Enter a {kind} name keyword',
@@ -671,7 +660,8 @@ const Map<String, String> enStrings = {
   '删除连接「{name}」？': 'Delete connection "{name}"?',
   '已选 {count} 个文件夹': '{count} folders selected',
   '开始扫描（{count} 个文件夹）': 'Start scan ({count} folders)',
-  '确定删除「{name}」吗？\n已有短片不会受影响，但工作室档案会被永久删除。': 'Delete "{name}"?\nExisting scenes are not affected, but the studio record will be deleted permanently.',
+  '确定删除「{name}」吗？\n已有短片不会受影响，但工作室档案会被永久删除。':
+      'Delete "{name}"?\nExisting scenes are not affected, but the studio record will be deleted permanently.',
   '短片数：{count}': 'Scenes: {count}',
   '评分：{rating} / 5.0': 'Rating: {rating} / 5.0',
   '上级工作室：{name}': 'Parent studio: {name}',
@@ -687,7 +677,8 @@ const Map<String, String> enStrings = {
   '当前演员': 'Current performer',
   'sceneMerge 失败': 'sceneMerge failed',
   'sceneUpdate 失败': 'sceneUpdate failed',
-  '先填写包索引地址（index.yml 的完整 URL）': 'Enter the package index URL first (full URL to index.yml)',
+  '先填写包索引地址（index.yml 的完整 URL）':
+      'Enter the package index URL first (full URL to index.yml)',
   '如 natural / fake': 'e.g. natural / fake',
   '尚未配置服务器': 'No server configured yet',
   '强制重新扫描': 'Force rescan',
@@ -716,5 +707,37 @@ const Map<String, String> enStrings = {
   '集合详情': 'Collection details',
   '搜索集合': 'Search collections',
   '没有集合': 'No collections',
+  '选择要加入的集合': 'Select collections to add to',
+  '加载集合失败：{error}': 'Failed to load collections: {error}',
+  '读取集合失败，未做任何修改': 'Failed to read collections; no changes were made',
+  '已加入集合 {count} 个': 'Added {count} scenes to collections',
+  '，跳过已在集合中的短片 {skipped} 个': ', skipped {skipped} already in these collections',
+  '所选短片都已在这些集合中': 'All selected scenes are already in these collections',
+  '其他信息': 'Other details',
+  '添加集合': 'New collection',
+  '新建集合': 'New collection',
+  '集合名称': 'Collection name',
+  '集合名称不能为空': 'Collection name is required',
+  '选择集合': 'Select collections',
+  '集合（{count}）': 'Collections ({count})',
+  '集合信息未加载，本次保存不会修改集合':
+      'Collections were not loaded; saving will not change memberships',
+  'groupCreate 失败': 'groupCreate failed',
   '导演': 'Director',
+  '后台任务': 'Background tasks',
+  '任务进度': 'Task progress',
+  '已中止': 'Stopped',
+  '清除已完成': 'Clear finished',
+  '已转入后台执行，可在顶栏查看进度':
+      'Running in background. Check progress from the top bar.',
+  '{failed} 个失败': '{failed} failed',
+  '标记已看 · {count} 个短片': 'Mark as watched · {count} scenes',
+  '收藏 · {count} 个短片': 'Favorite · {count} scenes',
+  '取消收藏 · {count} 个短片': 'Unfavorite · {count} scenes',
+  '设置评分 · {count} 个短片': 'Set rating · {count} scenes',
+  '添加标签 · {count} 个短片': 'Add tags · {count} scenes',
+  '移除标签 · {count} 个短片': 'Remove tags · {count} scenes',
+  '设置工作室 · {count} 个短片': 'Set studio · {count} scenes',
+  '添加演员 · {count} 个短片': 'Add performers · {count} scenes',
+  '加入集合 · {count} 个短片': 'Add to collections · {count} scenes',
 };

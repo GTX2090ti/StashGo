@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/batch_task_button.dart';
 import '../widgets/slot_badge.dart';
 import 'favorites_page.dart';
 import 'library_page.dart';
@@ -41,6 +42,10 @@ class _HomePageState extends State<HomePage> {
               ])
             : Text(_titles[_tab]),
         automaticallyImplyLeading: false,
+        actions: const [
+          BatchTaskButton(),
+          SizedBox(width: 4),
+        ],
       ),
       body: IndexedStack(index: _tab, children: pages),
       bottomNavigationBar: NavigationBarTheme(
