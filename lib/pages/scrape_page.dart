@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
+import '../l10n/l10n.dart';
 
 enum ScrapeKind { scene, performer, studio }
 
@@ -115,18 +116,19 @@ class _ScrapePageState extends State<ScrapePage> {
   String _friendlyErr(Object e) {
     final s = e.toString();
     if (s.contains('not implemented')) {
-      return '该削刮方式服务端不支持，请切换削刮方式或换一个源';
+      return tr('该削刮方式服务端不支持，请切换削刮方式或换一个源');
     }
     if (s.contains('404')) {
-      return '目标站点返回 404（内容不存在或页面已失效），可换削刮器重试';
+      return tr('目标站点返回 404（内容不存在或页面已失效），可换削刮器重试');
     }
-    if (s.contains('timeout') || s.contains('超时') || s.contains('SocketException') ||
-        s.contains('ClientException') || s.contains('连接')) {
-      return '站点响应超时或连接失败，请稍后重试或换一个源';
+    if (s.contains('timeout') || s.contains(tr('超时')) || s.contains('SocketException') ||
+        s.contains('ClientException') || s.contains(tr('连接'))) {
+      return tr('站点响应超时或连接失败，请稍后重试或换一个源');
     }
     final m = RegExp(r'scraper (\S+): failed to load URL').firstMatch(s);
     if (m != null) {
-      return '刮削器 ${m.group(1)} 抓取站点失败（站点不可访问或页面变化），可换削刮器';
+      return tr('刮削器 {name} 抓取站点失败（站点不可访问或页面变化），可换削刮器',
+          {'name': m.group(1)});
     }
     return s;
   }
@@ -148,10 +150,11 @@ class _ScrapePageState extends State<ScrapePage> {
           : (_isPerformer ? _performerResults.isEmpty : _studioResults.isEmpty);
       if (empty) {
         setState(() =>
-            _error = '没有削刮到结果。可点底部「换削刮器」换一个源重试。');
+            _error = tr('没有削刮到结果。可点底部「换削刮器」换一个源重试。'));
       }
     } catch (e) {
-      if (mounted) setState(() => _error = '削刮失败：${_friendlyErr(e)}');
+      if (mounted) setState(() => _error =
+            tr('削刮失败：{error}', {'error': _friendlyErr(e)}));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -202,7 +205,7 @@ class _ScrapePageState extends State<ScrapePage> {
       final name = p?.name.trim() ?? '';
       if (!mounted) return;
       if (name.isEmpty) {
-        setState(() => _error = '本地演员无名称，无法用名字搜索 Stash-box');
+        setState(() => _error = tr('本地演员无名称，无法用名字搜索 Stash-box'));
         return;
       }
       final r = await api.scrapePerformerByName({'stash_box_index': boxIndex}, name);
@@ -265,41 +268,48 @@ class _ScrapePageState extends State<ScrapePage> {
 
     if (_isScene) {
       final s = _sceneResults[_previewIndex];
-      add('标题', s.title);
-      add('日期', s.date);
-      if (s.studio != null) add('工作室', s.studio!.name);
-      add('简介', s.details);
+      add(tr('标题'), s.title);
+      add(tr('日期'), s.date);
+      if (s.studio != null) add(tr('工作室'), s.studio!.name);
+      add(tr('简介'), s.details);
       if (s.performers.isNotEmpty) {
-        rows.add('演员：${joinNames(s.performers.map((e) => e.name).toList())}');
+        rows.add(tr('演员：{names}',
+            {'names': joinNames(s.performers.map((e) => e.name).toList())}));
       }
       if (s.tags.isNotEmpty) {
-        rows.add('标签：${joinNames(s.tags.map((e) => e.name).toList())}');
+        rows.add(tr('标签：{names}',
+            {'names': joinNames(s.tags.map((e) => e.name).toList())}));
       }
       if (s.urls.isNotEmpty) rows.add('URL：${s.urls.join(' ')}');
       return rows;
     }
     if (_isPerformer) {
       final p = _performerResults[_previewIndex];
-      add('名称', p.name);
-      add('区别名', p.disambiguation);
-      if (p.aliases.trim().isNotEmpty) rows.add('别名：${p.aliases.trim()}');
-      add('出生日期', p.birthdate);
-      add('国籍', p.country);
-      add('族裔', p.ethnicity);
-      add('三围', p.measurements);
+      add(tr('名称'), p.name);
+      add(tr('区别名'), p.disambiguation);
+      if (p.aliases.trim().isNotEmpty) {
+        rows.add(tr('别名：{aliases}', {'aliases': p.aliases.trim()}));
+      }
+      add(tr('出生日期'), p.birthdate);
+      add(tr('国籍'), p.country);
+      add(tr('族裔'), p.ethnicity);
+      add(tr('三围'), p.measurements);
       final parts = <String>[];
       if (p.careerStart.isNotEmpty) parts.add(p.careerStart);
       if (p.careerEnd.isNotEmpty) parts.add(p.careerEnd);
       final career = parts.join(' - ');
-      if (career.isNotEmpty) rows.add('从业年限：$career');
-      add('简介', p.details);
+      if (career.isNotEmpty) {
+        rows.add(tr('从业年限：{career}', {'career': career}));
+      }
+      add(tr('简介'), p.details);
       if (p.tags.isNotEmpty) {
-        rows.add('标签：${joinNames(p.tags.map((e) => e.name).toList())}');
+        rows.add(tr('标签：{names}',
+            {'names': joinNames(p.tags.map((e) => e.name).toList())}));
       }
       return rows;
     }
     final st = _studioResults[_previewIndex];
-    add('名称', st.name);
+    add(tr('名称'), st.name);
     if (st.urls.isNotEmpty) rows.add('URL：${st.urls.join(' ')}');
     return rows;
   }
@@ -377,8 +387,9 @@ class _ScrapePageState extends State<ScrapePage> {
         SnackBar(
           content: Text(
               nameSkipped
-                  ? '已写入 $n 个字段（名字与库中已有演员冲突，未写入）'
-                  : '已写入 $n 个字段',
+                  ? tr('已写入 {count} 个字段（名字与库中已有演员冲突，未写入）',
+                      {'count': n})
+                  : tr('已写入 {count} 个字段', {'count': n}),
               style: const TextStyle(fontSize: 13)),
           duration: const Duration(seconds: 2),
         ),
@@ -388,7 +399,7 @@ class _ScrapePageState extends State<ScrapePage> {
       if (!mounted) return;
       setState(() {
         _applyError = true;
-        _applyMsg = '写回失败：$e';
+        _applyMsg = tr('写回失败：{error}', {'error': e});
       });
     } finally {
       if (mounted) setState(() => _applying = false);
@@ -396,9 +407,9 @@ class _ScrapePageState extends State<ScrapePage> {
   }
 
   String _title() {
-    if (_previewIndex >= 0) return '削刮结果预览';
-    if (_started) return '削刮结果';
-    return '元数据削刮';
+    if (_previewIndex >= 0) return tr('削刮结果预览');
+    if (_started) return tr('削刮结果');
+    return tr('元数据削刮');
   }
 
   // ---------- UI ----------
@@ -420,7 +431,7 @@ class _ScrapePageState extends State<ScrapePage> {
       children: [
         FilledButton(
           onPressed: _applying || rows.isEmpty ? null : _apply,
-          child: Text(_applying ? '应用中…' : '应用并写回'),
+          child: Text(_applying ? tr('应用中…') : tr('应用并写回')),
         ),
         const SizedBox(height: 12),
         if (img.isNotEmpty)
@@ -440,11 +451,11 @@ class _ScrapePageState extends State<ScrapePage> {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           value: _includeImage,
-          title: const Text('应用图片（下载后转为 base64 写入）'),
+          title:  Text(tr('应用图片（下载后转为 base64 写入）')),
           onChanged: (v) => setState(() => _includeImage = v),
         ),
         const SizedBox(height: 8),
-        Text('将写入 ${rows.length} 个字段',
+        Text(tr('将写入 {count} 个字段', {'count': rows.length}),
             style: theme.textTheme.titleSmall),
         const SizedBox(height: 6),
         for (final row in rows)
@@ -458,11 +469,11 @@ class _ScrapePageState extends State<ScrapePage> {
             ),
             child: Text(row, style: theme.textTheme.bodyMedium),
           ),
-        Text('空字段不会写入，库内不存在的演员/标签/工作室将自动创建。',
+        Text(tr('空字段不会写入，库内不存在的演员/标签/工作室将自动创建。'),
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         if (!_isStudio)
-          Text('标签与本地已有标签取并集，不会覆盖已保存的标签。',
+          Text(tr('标签与本地已有标签取并集，不会覆盖已保存的标签。'),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         if (_applyMsg.isNotEmpty) ...[
@@ -478,7 +489,7 @@ class _ScrapePageState extends State<ScrapePage> {
         const SizedBox(height: 16),
         OutlinedButton(
           onPressed: () => setState(() => _previewIndex = -1),
-          child: const Text('返回结果'),
+          child:  Text(tr('返回结果')),
         ),
       ],
     );
@@ -490,20 +501,20 @@ class _ScrapePageState extends State<ScrapePage> {
       return StatusView(loading: true, empty: '', onRetry: () {});
     }
     final results = _isScene
-        ? _sceneResults.map((e) => (e.title.isEmpty ? '（无标题）' : e.title,
+        ? _sceneResults.map((e) => (e.title.isEmpty ? tr('（无标题）') : e.title,
             e.date))
             .toList()
         : _isPerformer
             ? _performerResults
                 .map((e) => (
-                      e.name.isEmpty ? '（无名称）' : e.name,
+                      e.name.isEmpty ? tr('（无名称）') : e.name,
                       [e.country, e.birthdate]
                           .where((v) => v.isNotEmpty)
                           .join(' · ')
                     ))
                 .toList()
             : _studioResults
-                .map((e) => (e.name.isEmpty ? '（无名称）' : e.name,
+                .map((e) => (e.name.isEmpty ? tr('（无名称）') : e.name,
                     e.urls.isEmpty ? '' : e.urls.first))
                 .toList();
 
@@ -515,7 +526,7 @@ class _ScrapePageState extends State<ScrapePage> {
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: const Color(0xFFE5533D))),
         if (results.isEmpty && _error.isEmpty)
-          Text('没有削刮到结果', style: theme.textTheme.bodySmall),
+          Text(tr('没有削刮到结果'), style: theme.textTheme.bodySmall),
         for (var i = 0; i < results.length; i++)
           Container(
             margin: const EdgeInsets.only(bottom: 4),
@@ -549,7 +560,7 @@ class _ScrapePageState extends State<ScrapePage> {
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     minimumSize: const Size(0, 30)),
                 onPressed: () => setState(() => _previewIndex = i),
-                child: const Text('查看', style: TextStyle(fontSize: 11)),
+                child:  Text(tr('查看'), style: TextStyle(fontSize: 11)),
               ),
             ]),
           ),
@@ -562,7 +573,7 @@ class _ScrapePageState extends State<ScrapePage> {
             _performerResults = [];
             _studioResults = [];
           }),
-          child: const Text('换削刮器'),
+          child:  Text(tr('换削刮器')),
         ),
       ],
     );
@@ -575,7 +586,7 @@ class _ScrapePageState extends State<ScrapePage> {
         if (_isStudio)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text('工作室削刮：通过 Stash-box 按名称匹配',
+            child: Text(tr('工作室削刮：通过 Stash-box 按名称匹配'),
                 style: theme.textTheme.bodySmall),
           )
         else
@@ -586,7 +597,7 @@ class _ScrapePageState extends State<ScrapePage> {
                 Expanded(
                   child: SizedBox(
                     height: 34,
-                    child: _modeButton(i, ['片段削刮', '名称', 'URL'][i]),
+                    child: _modeButton(i, [tr('片段削刮'), tr('名称'), 'URL'][i]),
                   ),
                 ),
                 if (i < 2) const SizedBox(width: 8),
@@ -596,7 +607,7 @@ class _ScrapePageState extends State<ScrapePage> {
 
         if (_mode == 0) ...[
           const SizedBox(height: 12),
-          Text('片段削刮：以当前条目的已有信息为上下文削刮',
+          Text(tr('片段削刮：以当前条目的已有信息为上下文削刮'),
               style: theme.textTheme.bodySmall),
           const SizedBox(height: 8),
           for (final s in _fragmentScrapers)
@@ -618,14 +629,14 @@ class _ScrapePageState extends State<ScrapePage> {
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       minimumSize: const Size(0, 30)),
                   onPressed: _loading ? null : () => _scrapeFragment(s),
-                  child: const Text('削刮', style: TextStyle(fontSize: 11)),
+                  child:  Text(tr('削刮'), style: TextStyle(fontSize: 11)),
                 ),
               ]),
             ),
           // Stash-box 不支持片段（FRAGMENT），片段模式用本地演员名自动去 box 搜索。
           if (_isPerformer && _boxes.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text('Stash-box（用当前演员名字搜索）',
+            Text(tr('Stash-box（用当前演员名字搜索）'),
                 style: theme.textTheme.bodySmall),
             const SizedBox(height: 8),
             for (var i = 0; i < _boxes.length; i++)
@@ -649,13 +660,13 @@ class _ScrapePageState extends State<ScrapePage> {
                         minimumSize: const Size(0, 30)),
                     onPressed:
                         _loading ? null : () => _scrapeBoxFragment(i),
-                    child: const Text('削刮', style: TextStyle(fontSize: 11)),
+                    child:  Text(tr('削刮'), style: TextStyle(fontSize: 11)),
                   ),
                 ]),
               ),
           ],
           if (_fragmentScrapers.isEmpty && _boxes.isEmpty)
-            Text('服务端未返回支持片段削刮的本地刮削器',
+            Text(tr('服务端未返回支持片段削刮的本地刮削器'),
                 style: theme.textTheme.bodySmall),
         ] else if (_mode == 1) ...[
           const SizedBox(height: 12),
@@ -663,12 +674,16 @@ class _ScrapePageState extends State<ScrapePage> {
             controller: _queryCtrl,
             contextMenuBuilder: zhContextMenuBuilder,
             decoration: InputDecoration(
-              labelText: '输入${_isScene ? "短片" : (_isPerformer ? "演员" : "工作室")}名称关键词',
+              labelText: tr('输入{kind}名称关键词', {
+                'kind': _isScene
+                    ? tr('短片')
+                    : (_isPerformer ? tr('演员') : tr('工作室')),
+              }),
               isDense: true,
               suffixIcon: _queryCtrl.text.isEmpty
                   ? null
                   : IconButton(
-                      tooltip: '清空',
+                      tooltip: tr('清空'),
                       icon: const Icon(Icons.clear, size: 16),
                       onPressed: () {
                         _queryCtrl.clear();
@@ -700,12 +715,12 @@ class _ScrapePageState extends State<ScrapePage> {
                   onPressed: _loading || _queryCtrl.text.trim().isEmpty
                       ? null
                       : () => _scrapeQuery(src),
-                  child: const Text('削刮', style: TextStyle(fontSize: 11)),
+                  child:  Text(tr('削刮'), style: TextStyle(fontSize: 11)),
                 ),
               ]),
             ),
           if (_querySources.isEmpty)
-            Text('未找到可用削刮源（无 Stash-box 且无本地刮削器）',
+            Text(tr('未找到可用削刮源（无 Stash-box 且无本地刮削器）'),
                 style: theme.textTheme.bodySmall),
         ] else ...[
           const SizedBox(height: 12),
@@ -723,10 +738,10 @@ class _ScrapePageState extends State<ScrapePage> {
             onPressed: _loading || _urlCtrl.text.trim().isEmpty
                 ? null
                 : _scrapeUrl,
-            child: const Text('开始削刮'),
+            child:  Text(tr('开始削刮')),
           ),
           const SizedBox(height: 6),
-          Text('需要刮削器支持 URL 类型削刮。', style: theme.textTheme.bodySmall),
+          Text(tr('需要刮削器支持 URL 类型削刮。'), style: theme.textTheme.bodySmall),
         ],
       ],
     );

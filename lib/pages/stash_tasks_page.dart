@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
+import '../l10n/l10n.dart';
 
 /// Stash 后台任务：扫描 / 生成 / 清理 / 自动打标签 + 实时任务列表。
 class StashTasksPage extends StatefulWidget {
@@ -160,7 +161,7 @@ class _StashTasksPageState extends State<StashTasksPage> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Text('选择扫描文件夹（可多选）',
+                    child: Text(tr('选择扫描文件夹（可多选）'),
                         style: Theme.of(ctx).textTheme.titleMedium),
                   ),
                   Padding(
@@ -169,13 +170,13 @@ class _StashTasksPageState extends State<StashTasksPage> {
                       controller: ctrl,
                       contextMenuBuilder: zhContextMenuBuilder,
                       decoration: InputDecoration(
-                        labelText: '搜索文件夹',
+                        labelText: tr('搜索文件夹'),
                         prefixIcon: Icon(Icons.search, size: 18),
                         isDense: true,
                         suffixIcon: query.isEmpty
                             ? null
                             : IconButton(
-                                tooltip: '清空',
+                                tooltip: tr('清空'),
                                 icon: const Icon(Icons.clear, size: 16),
                                 onPressed: () {
                                   ctrl.clear();
@@ -193,15 +194,15 @@ class _StashTasksPageState extends State<StashTasksPage> {
                       TextButton(
                         onPressed: () =>
                             setSheet(() => sel.addAll(_libraryPaths)),
-                        child: const Text('全选', style: TextStyle(fontSize: 13)),
+                        child:  Text(tr('全选'), style: TextStyle(fontSize: 13)),
                       ),
                       const SizedBox(width: 4),
                       TextButton(
                         onPressed: () => setSheet(() => sel.clear()),
-                        child: const Text('清空', style: TextStyle(fontSize: 13)),
+                        child:  Text(tr('清空'), style: TextStyle(fontSize: 13)),
                       ),
                       const Spacer(),
-                      Text('已选 ${sel.length} 个',
+                      Text(tr('已选 {count} 个', {'count': sel.length}),
                           style: Theme.of(ctx).textTheme.bodySmall),
                     ]),
                   ),
@@ -251,7 +252,9 @@ class _StashTasksPageState extends State<StashTasksPage> {
                           setState(() {});
                           Navigator.pop(ctx);
                         },
-                        child: Text(sel.isEmpty ? '扫描全部文件夹' : '确定（${sel.length} 个）'),
+                        child: Text(sel.isEmpty
+                            ? tr('扫描全部文件夹')
+                            : tr('确定（{count} 个）', {'count': sel.length})),
                       ),
                     ),
                   ),
@@ -299,7 +302,8 @@ class _StashTasksPageState extends State<StashTasksPage> {
       messenger.showSnackBar(SnackBar(content: Text(okText)));
       await _refresh();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('提交失败：$e')));
+      messenger.showSnackBar(
+          SnackBar(content: Text(tr('提交失败：{error}', {'error': e}))));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -308,15 +312,15 @@ class _StashTasksPageState extends State<StashTasksPage> {
   String _statusText(String s) {
     switch (s.toUpperCase()) {
       case 'READY':
-        return '排队中';
+        return tr('排队中');
       case 'RUNNING':
-        return '执行中';
+        return tr('执行中');
       case 'FINISHED':
-        return '已完成';
+        return tr('已完成');
       case 'FAILED':
-        return '失败';
+        return tr('失败');
       case 'CANCELLED':
-        return '已取消';
+        return tr('已取消');
       default:
         return s;
     }
@@ -326,26 +330,26 @@ class _StashTasksPageState extends State<StashTasksPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Stash 任务')),
+      appBar: AppBar(title:  Text(tr('Stash 任务'))),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
           _card(
             theme,
             icon: Icons.document_scanner_outlined,
-            title: '扫描',
-            subtitle: '扫描 Stash 配置的媒体目录，把新增/变更的短片与图片入库。',
+            title: tr('扫描'),
+            subtitle: tr('扫描 Stash 配置的媒体目录，把新增/变更的短片与图片入库。'),
             children: [
               if (_pathsError != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
-                  child: Text('路径加载失败：$_pathsError',
+                  child: Text(tr('路径加载失败：{error}', {'error': _pathsError}),
                       style: TextStyle(
                           fontSize: 11,
                           color: theme.colorScheme.error)),
                 ),
               if (_libraryPaths.isNotEmpty) ...[
-                const Text('扫描范围',
+                 Text(tr('扫描范围'),
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
                 Row(children: [
@@ -355,8 +359,8 @@ class _StashTasksPageState extends State<StashTasksPage> {
                       icon: const Icon(Icons.folder_open, size: 16),
                       label: Text(
                         _scanPaths.isEmpty
-                            ? '全部文件夹'
-                            : '已选 ${_scanPaths.length} 个文件夹',
+                            ? tr('全部文件夹')
+                            : tr('已选 {count} 个文件夹', {'count': _scanPaths.length}),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -364,7 +368,7 @@ class _StashTasksPageState extends State<StashTasksPage> {
                   if (_scanPaths.isNotEmpty) ...[
                     const SizedBox(width: 6),
                     IconButton(
-                      tooltip: '清空选择',
+                      tooltip: tr('清空选择'),
                       icon: const Icon(Icons.clear_all, size: 18),
                       onPressed: () => setState(() => _scanPaths.clear()),
                     ),
@@ -374,7 +378,7 @@ class _StashTasksPageState extends State<StashTasksPage> {
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      '未勾选任何文件夹时扫描全部；勾选后只扫描所选文件夹。',
+                      tr('未勾选任何文件夹时扫描全部；勾选后只扫描所选文件夹。'),
                       style: TextStyle(
                           fontSize: 11,
                           color: theme.colorScheme.onSurfaceVariant),
@@ -384,25 +388,25 @@ class _StashTasksPageState extends State<StashTasksPage> {
               ],
               if (_scanInputFields.isEmpty ||
                   _scanInputFields.contains('rescan'))
-                _switch('强制重新扫描', _scanRescan, (v) => _scanRescan = v,
-                    hint: '即使文件修改时间未变也重新处理，耗时更长'),
+                _switch(tr('强制重新扫描'), _scanRescan, (v) => _scanRescan = v,
+                    hint: tr('即使文件修改时间未变也重新处理，耗时更长')),
               if (_scanInputFields.isEmpty ||
                   _scanInputFields.contains('useFileMetadata'))
-                _switch('使用文件元数据', _scanUseFileMetadata,
+                _switch(tr('使用文件元数据'), _scanUseFileMetadata,
                     (v) => _scanUseFileMetadata = v,
-                    hint: '从文件读取元数据（分辨率、时长等），更准确但较慢'),
-              _switch('生成封面', _scanCovers, (v) => _scanCovers = v),
-              _switch('生成视频预览', _scanPreviews, (v) => _scanPreviews = v),
-              _switch('生成图片预览', _scanImagePreviews,
+                    hint: tr('从文件读取元数据（分辨率、时长等），更准确但较慢')),
+              _switch(tr('生成封面'), _scanCovers, (v) => _scanCovers = v),
+              _switch(tr('生成视频预览'), _scanPreviews, (v) => _scanPreviews = v),
+              _switch(tr('生成图片预览'), _scanImagePreviews,
                   (v) => _scanImagePreviews = v),
-              _switch('生成感知哈希', _scanPhashes, (v) => _scanPhashes = v,
-                  hint: '用于以图搜图 / 重复检测'),
-              _switch('生成预览缩略图', _scanSprites, (v) => _scanSprites = v),
+              _switch(tr('生成感知哈希'), _scanPhashes, (v) => _scanPhashes = v,
+                  hint: tr('用于以图搜图 / 重复检测')),
+              _switch(tr('生成预览缩略图'), _scanSprites, (v) => _scanSprites = v),
               const SizedBox(height: 6),
               _submitButton(
                 _scanPaths.isEmpty
-                    ? '开始扫描（全部文件夹）'
-                    : '开始扫描（${_scanPaths.length} 个文件夹）',
+                    ? tr('开始扫描（全部文件夹）')
+                    : tr('开始扫描（{count} 个文件夹）', {'count': _scanPaths.length}),
                 Icons.document_scanner_outlined,
                 () => _run(
                   () => buildApi().metadataScan(
@@ -415,7 +419,7 @@ class _StashTasksPageState extends State<StashTasksPage> {
                     scanGeneratePhashes: _scanPhashes,
                     scanGenerateSpritePreviews: _scanSprites,
                   ),
-                  '扫描已提交，可在下方任务列表查看进度',
+                  tr('扫描已提交，可在下方任务列表查看进度'),
                 ),
               ),
             ],
@@ -424,34 +428,34 @@ class _StashTasksPageState extends State<StashTasksPage> {
             _card(
               theme,
               icon: Icons.auto_awesome_motion_outlined,
-              title: '生成',
-              subtitle: '为已有媒体按类别生成封面/视频预览等（适合升级后补充素材）。',
+              title: tr('生成'),
+              subtitle: tr('为已有媒体按类别生成封面/视频预览等（适合升级后补充素材）。'),
             children: [
-              _switch('覆盖已存在', _genOverwrite, (v) => _genOverwrite = v,
-                  hint: '关闭时只补缺失的素材'),
-              _switch('封面', _genCovers, (v) => _genCovers = v),
-              _switch('视频预览', _genPreviews, (v) => _genPreviews = v),
-              _switch('图片预览', _genImagePreviews, (v) => _genImagePreviews = v),
-              _switch('感知哈希', _genPhashes, (v) => _genPhashes = v),
-              _switch('预览缩略图', _genSprites, (v) => _genSprites = v),
-              _switch('交互热图', _genHeatmaps, (v) => _genHeatmaps = v),
-              _switch('标记图像', _genMarkers, (v) => _genMarkers = v,
-                  hint: '生成场景标记的预览图'),
-              _switch('标记图片预览', _genMarkerImagePreviews,
+              _switch(tr('覆盖已存在'), _genOverwrite, (v) => _genOverwrite = v,
+                  hint: tr('关闭时只补缺失的素材')),
+              _switch(tr('封面'), _genCovers, (v) => _genCovers = v),
+              _switch(tr('视频预览'), _genPreviews, (v) => _genPreviews = v),
+              _switch(tr('图片预览'), _genImagePreviews, (v) => _genImagePreviews = v),
+              _switch(tr('感知哈希'), _genPhashes, (v) => _genPhashes = v),
+              _switch(tr('预览缩略图'), _genSprites, (v) => _genSprites = v),
+              _switch(tr('交互热图'), _genHeatmaps, (v) => _genHeatmaps = v),
+              _switch(tr('标记图像'), _genMarkers, (v) => _genMarkers = v,
+                  hint: tr('生成场景标记的预览图')),
+              _switch(tr('标记图片预览'), _genMarkerImagePreviews,
                   (v) => _genMarkerImagePreviews = v),
-              _switch('标记截图', _genMarkerScreenshots,
+              _switch(tr('标记截图'), _genMarkerScreenshots,
                   (v) => _genMarkerScreenshots = v),
-              _switch('转码', _genTranscodes, (v) => _genTranscodes = v,
-                  hint: '生成兼容格式以便在线播放'),
-              _switch('图片感知哈希', _genImagePhashes,
+              _switch(tr('转码'), _genTranscodes, (v) => _genTranscodes = v,
+                  hint: tr('生成兼容格式以便在线播放')),
+              _switch(tr('图片感知哈希'), _genImagePhashes,
                   (v) => _genImagePhashes = v),
-              _switch('图片缩略图', _genImageThumbnails,
+              _switch(tr('图片缩略图'), _genImageThumbnails,
                   (v) => _genImageThumbnails = v),
-              _switch('片段预览', _genClipPreviews,
+              _switch(tr('片段预览'), _genClipPreviews,
                   (v) => _genClipPreviews = v),
               const SizedBox(height: 6),
               _submitButton(
-                '开始生成',
+                tr('开始生成'),
                 Icons.auto_awesome_motion_outlined,
                 () => _run(
                   () => buildApi().generate(
@@ -471,7 +475,7 @@ class _StashTasksPageState extends State<StashTasksPage> {
                     clipPreviews: _genClipPreviews,
                     overwrite: _genOverwrite,
                   ),
-                  '生成任务已提交',
+                  tr('生成任务已提交'),
                 ),
               ),
             ],
@@ -480,14 +484,14 @@ class _StashTasksPageState extends State<StashTasksPage> {
             _card(
               theme,
               icon: Icons.cleaning_services_outlined,
-              title: '清理',
-              subtitle: '删除孤儿媒体文件等垃圾数据，释放空间。',
+              title: tr('清理'),
+              subtitle: tr('删除孤儿媒体文件等垃圾数据，释放空间。'),
             children: [
-              _switch('仅预览（不实际删除）', _cleanDryRun, (v) => _cleanDryRun = v,
-                  hint: '先以预览方式查看要清理的内容，确认后再关闭预览执行'),
+              _switch(tr('仅预览（不实际删除）'), _cleanDryRun, (v) => _cleanDryRun = v,
+                  hint: tr('先以预览方式查看要清理的内容，确认后再关闭预览执行')),
               const SizedBox(height: 6),
               _submitButton(
-                _cleanDryRun ? '预览清理' : '执行清理',
+                _cleanDryRun ? tr('预览清理') : tr('执行清理'),
                 Icons.cleaning_services_outlined,
                 () => _run(
                   () => buildApi().clean(
@@ -495,7 +499,7 @@ class _StashTasksPageState extends State<StashTasksPage> {
                         ['metadataClean', 'metadataCleanGenerated', 'clean']),
                     dryRun: _cleanDryRun,
                   ),
-                  _cleanDryRun ? '清理预览已提交，查看任务详情' : '清理已提交',
+                  _cleanDryRun ? tr('清理预览已提交，查看任务详情') : tr('清理已提交'),
                 ),
               ),
             ],
@@ -504,15 +508,15 @@ class _StashTasksPageState extends State<StashTasksPage> {
             _card(
               theme,
               icon: Icons.sell_outlined,
-              title: '自动打标签',
-              subtitle: '按路径规则把演员/工作室/标签自动关联到短片。',
+              title: tr('自动打标签'),
+              subtitle: tr('按路径规则把演员/工作室/标签自动关联到短片。'),
             children: [
-              _switch('演员', _tagPerformers, (v) => _tagPerformers = v),
-              _switch('工作室', _tagStudios, (v) => _tagStudios = v),
-              _switch('标签', _tagTags, (v) => _tagTags = v),
+              _switch(tr('演员'), _tagPerformers, (v) => _tagPerformers = v),
+              _switch(tr('工作室'), _tagStudios, (v) => _tagStudios = v),
+              _switch(tr('标签'), _tagTags, (v) => _tagTags = v),
               const SizedBox(height: 6),
               _submitButton(
-                '开始自动打标签',
+                tr('开始自动打标签'),
                 Icons.sell_outlined,
                 () => _run(
                   () => buildApi().autoTag(
@@ -521,7 +525,7 @@ class _StashTasksPageState extends State<StashTasksPage> {
                     studios: _tagStudios,
                     tags: _tagTags,
                   ),
-                  '自动打标签已提交',
+                  tr('自动打标签已提交'),
                 ),
               ),
             ],
@@ -530,8 +534,8 @@ class _StashTasksPageState extends State<StashTasksPage> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                '当前 Stash 版本较旧（无 Job 任务系统），不显示任务列表；'
-                '扫描提交后请到 Stash 网页端查看进度。',
+                tr('当前 Stash 版本较旧（无 Job 任务系统），不显示任务列表；') +
+                    tr('扫描提交后请到 Stash 网页端查看进度。'),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
@@ -540,13 +544,13 @@ class _StashTasksPageState extends State<StashTasksPage> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Text('当前任务列表', style: theme.textTheme.titleMedium),
+                Text(tr('当前任务列表'), style: theme.textTheme.titleMedium),
                 const Spacer(),
-                Text('每 5 秒自动刷新',
+                Text(tr('每 5 秒自动刷新'),
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 IconButton(
-                  tooltip: '立即刷新',
+                  tooltip: tr('立即刷新'),
                   icon: _busy
                       ? const SizedBox(
                           width: 16,
@@ -561,7 +565,7 @@ class _StashTasksPageState extends State<StashTasksPage> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Text('加载失败：$_error',
+                child: Text(tr('加载失败：{error}', {'error': _error}),
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: const Color(0xFFE5533D))),
               ),
@@ -569,7 +573,7 @@ class _StashTasksPageState extends State<StashTasksPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Center(
-                  child: Text('暂无任务',
+                  child: Text(tr('暂无任务'),
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 ),
@@ -586,7 +590,7 @@ class _StashTasksPageState extends State<StashTasksPage> {
                       color: _statusColor(job['status']?.toString() ?? ''),
                     ),
                     title: Text(
-                      job['description']?.toString() ?? '任务',
+                      job['description']?.toString() ?? tr('任务'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -686,7 +690,7 @@ class _StashTasksPageState extends State<StashTasksPage> {
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2))
           : Icon(icon, size: 18),
-      label: Text(_submitting ? '提交中…' : label),
+      label: Text(_submitting ? tr('提交中…') : label),
     );
   }
 

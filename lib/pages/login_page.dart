@@ -4,6 +4,7 @@ import '../api/stash_api.dart';
 import '../models/models.dart';
 import '../settings/app_settings.dart';
 import '../widgets/zh_toolbar.dart';
+import '../l10n/l10n.dart';
 
 /// 登录页：档案管理（多档案 + 内网/外网双地址）+ 连接测试。
 class LoginPage extends StatefulWidget {
@@ -67,14 +68,14 @@ class _LoginPageState extends State<LoginPage> {
     if (!_valid) {
       setState(() {
         _statusError = true;
-        _status = '请至少填写一个地址';
+        _status = tr('请至少填写一个地址');
       });
       return;
     }
     setState(() {
       _testing = true;
       _statusError = false;
-      _status = '测试连接中…';
+      _status = tr('测试连接中…');
     });
     final p = _collect();
     final base = p.lanUrl.isNotEmpty ? p.lanUrl : p.wanUrl;
@@ -83,13 +84,13 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       setState(() {
         _statusError = false;
-        _status = '连接成功，Stash 版本 $v';
+        _status = tr('连接成功，Stash 版本 {v}', {'v': v});
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _statusError = true;
-        _status = '连接失败：$e';
+        _status = tr('连接失败：{error}', {'error': e});
       });
     } finally {
       if (mounted) setState(() => _testing = false);
@@ -100,14 +101,14 @@ class _LoginPageState extends State<LoginPage> {
     if (!_valid) {
       setState(() {
         _statusError = true;
-        _status = '请至少填写一个地址';
+        _status = tr('请至少填写一个地址');
       });
       return;
     }
     setState(() => _saving = true);
     await AppSettings.instance.upsertProfile(_collect());
     if (!mounted) return;
-    await AppSettings.instance.autoSelect('保存档案');
+    await AppSettings.instance.autoSelect(tr('保存档案'));
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false);
   }
@@ -126,20 +127,20 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('连接到 Stash 服务器', style: theme.textTheme.titleLarge),
+                Text(tr('连接到 Stash 服务器'), style: theme.textTheme.titleLarge),
                 const SizedBox(height: 20),
                 TextField(
                   controller: _nameCtrl,
                   contextMenuBuilder: zhContextMenuBuilder,
-                  decoration: const InputDecoration(labelText: '档案名称'),
+                  decoration:  InputDecoration(labelText: tr('档案名称')),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _lanCtrl,
                   keyboardType: TextInputType.url,
                   contextMenuBuilder: zhContextMenuBuilder,
-                  decoration: const InputDecoration(
-                    labelText: '内网地址',
+                  decoration:  InputDecoration(
+                    labelText: tr('内网地址'),
                     hintText: 'http://192.168.2.180:9999',
                   ),
                 ),
@@ -148,8 +149,8 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _wanCtrl,
                   keyboardType: TextInputType.url,
                   contextMenuBuilder: zhContextMenuBuilder,
-                  decoration: const InputDecoration(
-                    labelText: '外网地址',
+                  decoration:  InputDecoration(
+                    labelText: tr('外网地址'),
                     hintText: 'http://stash.example.com:9999',
                   ),
                 ),
@@ -170,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '填写内外网双地址后，App 会实测延迟并自动选路。',
+                  tr('填写内外网双地址后，App 会实测延迟并自动选路。'),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
@@ -179,14 +180,14 @@ class _LoginPageState extends State<LoginPage> {
                   Expanded(
                     child: FilledButton.tonal(
                       onPressed: _testing ? null : _test,
-                      child: Text(_testing ? '测试中…' : '测试连接'),
+                      child: Text(_testing ? tr('测试中…') : tr('测试连接')),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
                       onPressed: _saving ? null : _save,
-                      child: Text(_saving ? '保存中…' : '保存并进入'),
+                      child: Text(_saving ? tr('保存中…') : tr('保存并进入')),
                     ),
                   ),
                 ]),
@@ -202,7 +203,7 @@ class _LoginPageState extends State<LoginPage> {
                 ],
                 if (cfg.profiles.length > 1) ...[
                   const SizedBox(height: 28),
-                  Text('已有档案', style: theme.textTheme.titleSmall),
+                  Text(tr('已有档案'), style: theme.textTheme.titleSmall),
                   const SizedBox(height: 8),
                   for (final p in cfg.profiles)
                     ListTile(

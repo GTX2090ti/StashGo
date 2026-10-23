@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
 import 'studio_detail_page.dart';
+import '../l10n/l10n.dart';
 
 /// 标签浏览：全部标签列表 + 搜索（对齐 iOS 独立标签板块）。
 class TagsPage extends StatefulWidget {
@@ -49,7 +50,7 @@ class _TagsPageState extends State<TagsPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      showToast(context, '加载标签失败：$e', error: true);
+      showToast(context, tr('加载标签失败：{error}', {'error': e}), error: true);
     }
   }
 
@@ -70,7 +71,7 @@ class _TagsPageState extends State<TagsPage> {
             controller: _searchCtrl,
             contextMenuBuilder: zhContextMenuBuilder,
             decoration: InputDecoration(
-              hintText: '搜索标签',
+              hintText: tr('搜索标签'),
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _query.isNotEmpty
                   ? IconButton(
@@ -89,7 +90,7 @@ class _TagsPageState extends State<TagsPage> {
           child: _loading
               ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
               : _filtered.isEmpty
-                  ? StatusView(loading: false, empty: '没有标签', onRetry: _load)
+                  ? StatusView(loading: false, empty: tr('没有标签'), onRetry: _load)
                   : ListView.builder(
                       padding: const EdgeInsets.all(8),
                       itemCount: _filtered.length,
@@ -119,9 +120,9 @@ class _TagsPageState extends State<TagsPage> {
     if (widget.embedded) return body;
     return Scaffold(
       appBar: AppBar(
-        title: Text('标签（${_tags.length}）'),
+        title: Text(tr('标签（{count}）', {'count': _tags.length})),
         actions: [
-          IconButton(tooltip: '刷新', icon: const Icon(Icons.refresh), onPressed: _load),
+          IconButton(tooltip: tr('刷新'), icon: const Icon(Icons.refresh), onPressed: _load),
         ],
       ),
       body: body,

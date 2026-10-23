@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
+import '../l10n/l10n.dart';
 
 /// 完整场景筛选器（对齐 iOS SceneFilterSheet）：
 /// 工作室/演员/标签多选 + 评分/O计数/时长/日期/分辨率 + 已整理 + 仅看封面。
@@ -51,7 +52,7 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      showToast(context, '加载筛选选项失败：$e', error: true);
+      showToast(context, tr('加载筛选选项失败：{error}', {'error': e}), error: true);
     }
   }
 
@@ -68,8 +69,8 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
       initialDateRange: (from != null && to != null)
           ? DateTimeRange(start: from, end: to)
           : null,
-      helpText: '选择日期范围（可不选）',
-      saveText: '确定',
+      helpText: tr('选择日期范围（可不选）'),
+      saveText: tr('确定'),
     );
     if (picked != null && mounted) {
       setState(() {
@@ -100,7 +101,7 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
       title: Text(title),
       subtitle: selected.isEmpty
           ? null
-          : Text('已选 ${selected.length} 项',
+          : Text(tr('已选 {count} 项', {'count': selected.length}),
               style: TextStyle(color: theme.colorScheme.primary)),
       children: [
         Padding(
@@ -109,13 +110,13 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
             contextMenuBuilder: zhContextMenuBuilder,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
-              hintText: '搜索$title',
+              hintText: tr('搜索{title}', {'title': title}),
               isDense: true,
               prefixIcon: const Icon(Icons.search, size: 18),
               suffixIcon: q.isEmpty
                   ? null
                   : IconButton(
-                      tooltip: '清空',
+                      tooltip: tr('清空'),
                       icon: const Icon(Icons.clear, size: 16),
                       onPressed: () =>
                           setState(() => _multiSearch[title] = ''),
@@ -130,7 +131,7 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
           ),
         ),
         if (shown.isEmpty)
-          const Padding(padding: EdgeInsets.all(12), child: Text('（无）')),
+           Padding(padding: EdgeInsets.all(12), child: Text(tr('（无）'))),
         for (final it in shown)
           CheckboxListTile(
             dense: true,
@@ -155,7 +156,7 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('筛选'),
+        title:  Text(tr('筛选')),
         actions: [
           TextButton(
             onPressed: () => setState(() => _f
@@ -170,11 +171,11 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
               ..dateTo = ''
               ..organized = false
               ..coversOnly = false),
-            child: const Text('重置'),
+            child:  Text(tr('重置')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, _f),
-            child: const Text('应用'),
+            child:  Text(tr('应用')),
           ),
           const SizedBox(width: 8),
         ],
@@ -185,21 +186,21 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
               padding: const EdgeInsets.only(bottom: 24),
               children: [
                 _multiSelect<Studio>(
-                  title: '工作室',
+                  title: tr('工作室'),
                   items: _studios,
                   selected: _f.studios,
                   label: (s) => s.name,
                   id: (s) => s.id,
                 ),
                 _multiSelect<Performer>(
-                  title: '演员',
+                  title: tr('演员'),
                   items: _performers,
                   selected: _f.performers,
                   label: (p) => p.name,
                   id: (p) => p.id,
                 ),
                 _multiSelect<Tag>(
-                  title: '标签',
+                  title: tr('标签'),
                   items: _tags,
                   selected: _f.tags,
                   label: (t) => t.name,
@@ -211,7 +212,7 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('评分 ≥', style: theme.textTheme.titleSmall),
+                      Text(tr('评分 ≥'), style: theme.textTheme.titleSmall),
                       Row(
                         children: [
                           for (var i = 1; i <= 10; i++)
@@ -232,12 +233,12 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text('O 计数 ≥', style: theme.textTheme.titleSmall),
+                      Text(tr('O 计数 ≥'), style: theme.textTheme.titleSmall),
                       Row(
                         children: [
                           for (var i = 0; i <= 5; i++)
                             ChoiceChip(
-                              label: Text(i == 0 ? '不限' : '$i'),
+                              label: Text(i == 0 ? tr('不限') : '$i'),
                               selected: _f.oCounter == i,
                               onSelected: (_) =>
                                   setState(() => _f.oCounter = i),
@@ -245,12 +246,12 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Text('时长 ≥（分钟）', style: theme.textTheme.titleSmall),
+                      Text(tr('时长 ≥（分钟）'), style: theme.textTheme.titleSmall),
                       Wrap(
                         spacing: 8,
                         children: [
                           for (final (v, label) in [
-                            (0, '不限'),
+                            (0, tr('不限')),
                             (10, '10'),
                             (30, '30'),
                             (60, '60'),
@@ -265,12 +266,12 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Text('分辨率 ≥', style: theme.textTheme.titleSmall),
+                      Text(tr('分辨率 ≥'), style: theme.textTheme.titleSmall),
                       Wrap(
                         spacing: 8,
                         children: [
                           for (final (v, label) in [
-                            (0, '不限'),
+                            (0, tr('不限')),
                             (720, '720p'),
                             (1080, '1080p'),
                             (2160, '4K'),
@@ -284,13 +285,13 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Text('日期范围', style: theme.textTheme.titleSmall),
+                      Text(tr('日期范围'), style: theme.textTheme.titleSmall),
                       const SizedBox(height: 4),
                       OutlinedButton.icon(
                         onPressed: _pickDate,
                         icon: const Icon(Icons.date_range, size: 18),
                         label: Text(_f.dateFrom.isEmpty && _f.dateTo.isEmpty
-                            ? '不限'
+                            ? tr('不限')
                             : '${_f.dateFrom.isNotEmpty ? _f.dateFrom : '…'} ~ '
                                 '${_f.dateTo.isNotEmpty ? _f.dateTo : '…'}'),
                       ),
@@ -298,14 +299,14 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         dense: true,
-                        title: const Text('仅看已收藏'),
+                        title:  Text(tr('仅看已收藏')),
                         value: _f.organized,
                         onChanged: (v) => setState(() => _f.organized = v),
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         dense: true,
-                        title: const Text('仅看有封面'),
+                        title:  Text(tr('仅看有封面')),
                         value: _f.coversOnly,
                         onChanged: (v) => setState(() => _f.coversOnly = v),
                       ),

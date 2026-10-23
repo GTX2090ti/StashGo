@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/common.dart';
+import '../l10n/l10n.dart';
 
 /// 媒体库统计页：调用 stats query，卡片网格展示短片/图片/演员/工作室等计数。
 class StatsPage extends StatefulWidget {
@@ -68,9 +69,9 @@ class _StatsPageState extends State<StatsPage> {
     s %= 3600;
     final m = s ~/ 60;
     final ss = s % 60;
-    if (h > 0) return '$h 小时 $m 分';
-    if (m > 0) return '$m 分 $ss 秒';
-    return '$ss 秒';
+    if (h > 0) return tr('{h} 小时 {m} 分', {'h': h, 'm': m});
+    if (m > 0) return tr('{m} 分 {ss} 秒', {'m': m, 'ss': ss});
+    return tr('{ss} 秒', {'ss': ss});
   }
 
   @override
@@ -82,27 +83,27 @@ class _StatsPageState extends State<StatsPage> {
         0;
 
     final items = <_StatItem>[
-      _StatItem('短片', _fmtNum(_s['scene_count']), Icons.movie_outlined),
-      _StatItem('短片总时长', _fmtDur(_s['scenes_duration']), Icons.timer_outlined),
-      _StatItem('短片体积', _fmtSize(_s['scenes_size']), Icons.storage_outlined),
-      _StatItem('图片', _fmtNum(_s['image_count']), Icons.image_outlined),
-      _StatItem('图片体积', _fmtSize(_s['images_size']), Icons.storage_outlined),
-      _StatItem('画廊', _fmtNum(_s['gallery_count']), Icons.collections_outlined),
-      _StatItem('演员', _fmtNum(_s['performer_count']), Icons.person_outline),
-      _StatItem('工作室', _fmtNum(_s['studio_count']), Icons.business_outlined),
-      _StatItem('分组', _fmtNum(groupCount), Icons.folder_outlined),
-      _StatItem('标签', _fmtNum(_s['tag_count']), Icons.sell_outlined),
-      _StatItem('已播放短片', _fmtNum(_s['scenes_played']), Icons.play_circle_outline),
-      _StatItem('播放次数', _fmtNum(_s['total_play_count']), Icons.replay_outlined),
-      _StatItem('累计播放时长', _fmtDur(_s['total_play_duration']), Icons.history),
+      _StatItem(tr('短片'), _fmtNum(_s['scene_count']), Icons.movie_outlined),
+      _StatItem(tr('短片总时长'), _fmtDur(_s['scenes_duration']), Icons.timer_outlined),
+      _StatItem(tr('短片体积'), _fmtSize(_s['scenes_size']), Icons.storage_outlined),
+      _StatItem(tr('图片'), _fmtNum(_s['image_count']), Icons.image_outlined),
+      _StatItem(tr('图片体积'), _fmtSize(_s['images_size']), Icons.storage_outlined),
+      _StatItem(tr('画廊'), _fmtNum(_s['gallery_count']), Icons.collections_outlined),
+      _StatItem(tr('演员'), _fmtNum(_s['performer_count']), Icons.person_outline),
+      _StatItem(tr('工作室'), _fmtNum(_s['studio_count']), Icons.business_outlined),
+      _StatItem(tr('分组'), _fmtNum(groupCount), Icons.folder_outlined),
+      _StatItem(tr('标签'), _fmtNum(_s['tag_count']), Icons.sell_outlined),
+      _StatItem(tr('已播放短片'), _fmtNum(_s['scenes_played']), Icons.play_circle_outline),
+      _StatItem(tr('播放次数'), _fmtNum(_s['total_play_count']), Icons.replay_outlined),
+      _StatItem(tr('累计播放时长'), _fmtDur(_s['total_play_duration']), Icons.history),
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('统计'),
+        title:  Text(tr('统计')),
         actions: [
           IconButton(
-            tooltip: '刷新',
+            tooltip: tr('刷新'),
             icon: const Icon(Icons.refresh),
             onPressed: _busy ? null : _load,
           ),
@@ -119,7 +120,7 @@ class _StatsPageState extends State<StatsPage> {
                       children: [
                         const Icon(Icons.error_outline, size: 40, color: Colors.red),
                         const SizedBox(height: 12),
-                        Text('统计查询失败', style: theme.textTheme.titleMedium),
+                        Text(tr('统计查询失败'), style: theme.textTheme.titleMedium),
                         const SizedBox(height: 8),
                         Text(_error!,
                             textAlign: TextAlign.center,
@@ -128,7 +129,7 @@ class _StatsPageState extends State<StatsPage> {
                         FilledButton.icon(
                           onPressed: _load,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('重试'),
+                          label:  Text(tr('重试')),
                         ),
                       ],
                     ),

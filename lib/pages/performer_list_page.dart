@@ -7,6 +7,7 @@ import 'adaptive_grid.dart';
 import '../widgets/zh_toolbar.dart';
 import 'performer_create_page.dart';
 import 'performer_detail_page.dart';
+import '../l10n/l10n.dart';
 
 /// 演员列表页：头像网格 + 翻页 + 搜索 + 手动添加。
 class PerformerListPage extends StatefulWidget {
@@ -32,14 +33,14 @@ class _PerformerListPageState extends State<PerformerListPage> {
   String _direction = 'ASC';
 
   /// 排序选项（Stash 0.31.1 Performer 排序白名单内的常用字段）。
-  static const List<(String, String)> _sortOptions = [
-    ('name', '名称'),
-    ('birthdate', '出生日期'),
-    ('scenes_count', '短片数'),
-    ('rating', '评分'),
-    ('created_at', '添加时间'),
-    ('updated_at', '更新时间'),
-    ('latest_scene', '最近短片'),
+  static List<(String, String)> get _sortOptions => [
+    ('name', tr('名称')),
+    ('birthdate', tr('出生日期')),
+    ('scenes_count', tr('短片数')),
+    ('rating', tr('评分')),
+    ('created_at', tr('添加时间')),
+    ('updated_at', tr('更新时间')),
+    ('latest_scene', tr('最近短片')),
   ];
 
   String get _sortLabel {
@@ -177,7 +178,7 @@ class _PerformerListPageState extends State<PerformerListPage> {
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
                 child: Row(children: [
                   Expanded(
-                    child: Text('排序方式',
+                    child: Text(tr('排序方式'),
                         style: theme.textTheme.titleMedium),
                   ),
                   TextButton.icon(
@@ -191,7 +192,7 @@ class _PerformerListPageState extends State<PerformerListPage> {
                       size: 16,
                     ),
                     label: Text(
-                      _direction == 'DESC' ? '从新到旧' : '从旧到新',
+                      _direction == 'DESC' ? tr('从新到旧') : tr('从旧到新'),
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -247,7 +248,7 @@ class _PerformerListPageState extends State<PerformerListPage> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 18),
         child: Text(
-          _error.isNotEmpty ? '加载失败，上拉重试' : '已经到底了',
+          _error.isNotEmpty ? tr('加载失败，上拉重试') : tr('已经到底了'),
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
@@ -270,12 +271,12 @@ class _PerformerListPageState extends State<PerformerListPage> {
               onChanged: (v) => setState(() => _query = v),
               onSubmitted: (_) => _reload(),
               decoration: InputDecoration(
-                hintText: '搜索演员',
+                hintText: tr('搜索演员'),
                 isDense: true,
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: '清空',
+                        tooltip: tr('清空'),
                         icon: const Icon(Icons.clear, size: 16),
                         onPressed: () {
                           _searchCtrl.clear();
@@ -293,7 +294,7 @@ class _PerformerListPageState extends State<PerformerListPage> {
               style:
                   FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10)),
               onPressed: _reload,
-              child: const Text('搜索', style: TextStyle(fontSize: 12)),
+              child:  Text(tr('搜索'), style: TextStyle(fontSize: 12)),
             ),
           ),
           const SizedBox(width: 6),
@@ -317,7 +318,7 @@ class _PerformerListPageState extends State<PerformerListPage> {
                   OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
               onPressed: _openCreate,
               icon: const Icon(Icons.add, size: 15),
-              label: const Text('添加', style: TextStyle(fontSize: 12)),
+              label:  Text(tr('添加'), style: TextStyle(fontSize: 12)),
             ),
           ),
         ]),
@@ -326,7 +327,7 @@ class _PerformerListPageState extends State<PerformerListPage> {
         child: _items.isEmpty && !_loadingMore
             ? StatusView(
                 loading: _loading,
-                empty: _error.isNotEmpty ? _error : '没有演员',
+                empty: _error.isNotEmpty ? _error : tr('没有演员'),
                 error: _error,
                 onRetry: _reload)
             : RefreshIndicator(
@@ -387,7 +388,7 @@ class _PerformerListPageState extends State<PerformerListPage> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '${p.sceneCount} 个场景',
+                                    tr('{count} 个场景', {'count': p.sceneCount}),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context)
@@ -411,7 +412,10 @@ class _PerformerListPageState extends State<PerformerListPage> {
 
     if (widget.embedded) return Scaffold(body: body);
     return Scaffold(
-        appBar: AppBar(title: Text(_total > 0 ? '演员 ($_total)' : '演员')),
+        appBar: AppBar(
+        title: Text(_total > 0
+            ? tr('演员 ({total})', {'total': _total})
+            : tr('演员'))),
         body: body);
   }
 }

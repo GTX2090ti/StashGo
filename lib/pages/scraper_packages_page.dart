@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../api/stash_api.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
+import '../l10n/l10n.dart';
 
 /// 削刮器包管理页：查看服务器上已安装的包，并从索引源搜索、勾选安装。
 ///
@@ -116,7 +117,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
     if (url.isEmpty) {
       setState(() {
         _available = [];
-        _availError = '先填写包索引地址（index.yml 的完整 URL）';
+        _availError = tr('先填写包索引地址（index.yml 的完整 URL）');
       });
       return;
     }
@@ -144,10 +145,10 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
     try {
       await buildApi().reloadScrapers();
       if (!mounted) return;
-      showToast(context, '已重新加载削刮器');
+      showToast(context, tr('已重新加载削刮器'));
     } catch (e) {
       if (!mounted) return;
-      showToast(context, '重新加载失败：$e', error: true);
+      showToast(context, tr('重新加载失败：{error}', {'error': e}), error: true);
     }
   }
 
@@ -197,7 +198,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('安装 ${all.length} 个包'),
+        title: Text(tr('安装 {count} 个包', {'count': all.length})),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,21 +207,22 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
               Text(all.map((e) => e.display).join('、')),
               if (deps.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                Text('含自动补齐的依赖：${deps.map((e) => e.display).join('、')}'),
+                Text(tr('含自动补齐的依赖：{deps}',
+                    {'deps': deps.map((e) => e.display).join('、')})),
               ],
               const SizedBox(height: 10),
-              const Text('安装后会自动重新加载削刮器，无需重启容器。'),
+               Text(tr('安装后会自动重新加载削刮器，无需重启容器。')),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child:  Text(tr('取消')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('安装'),
+            child:  Text(tr('安装')),
           ),
         ],
       ),
@@ -229,7 +231,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
 
     setState(() {
       _installing = true;
-      _installMsg = '正在提交安装任务…';
+      _installMsg = tr('正在提交安装任务…');
     });
     String? failure;
     try {
@@ -264,9 +266,11 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
       _picked.clear();
     });
     if (failure != null) {
-      showToast(context, '安装失败：$failure', error: true);
+      showToast(context, tr('安装失败：{failure}', {'failure': failure}),
+          error: true);
     } else {
-      showToast(context, '已安装 ${all.length} 个包并重新加载削刮器');
+      showToast(context,
+          tr('已安装 {count} 个包并重新加载削刮器', {'count': all.length}));
     }
   }
 
@@ -291,11 +295,13 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
       final pct = progress is num
           ? ' ${progress.toDouble().clamp(0, 100).toStringAsFixed(0)}%'
           : '';
-      setState(() => _installMsg = '安装中（$status$pct）');
+      setState(() => _installMsg =
+          tr('安装中（{status}{pct}）', {'status': status, 'pct': pct}));
       if (status == 'FINISHED') return;
       if (status == 'FAILED' || status == 'CANCELLED') {
         final err = job['error']?.toString() ?? '';
-        throw ApiException(err.isEmpty ? '安装任务$status' : err);
+        throw ApiException(
+            err.isEmpty ? tr('安装任务{status}', {'status': status}) : err);
       }
     }
   }
@@ -305,15 +311,15 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('削刮器包'),
+        title:  Text(tr('削刮器包')),
         actions: [
           IconButton(
-            tooltip: '重新加载削刮器',
+            tooltip: tr('重新加载削刮器'),
             icon: const Icon(Icons.sync),
             onPressed: _busy || _installing ? null : _reloadScrapers,
           ),
           IconButton(
-            tooltip: '刷新',
+            tooltip: tr('刷新'),
             icon: const Icon(Icons.refresh),
             onPressed: _busy || _installing ? null : _load,
           ),
@@ -323,8 +329,9 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
             : TabBar(
                 controller: _tab,
                 tabs: [
-                  Tab(text: '已安装 (${_installed.length})'),
-                  Tab(text: '可安装 (${_availBusy ? '…' : _available.length})'),
+                  Tab(text: tr('已安装 ({count})', {'count': _installed.length})),
+                  Tab(text: tr('可安装 ({count})',
+                      {'count': _availBusy ? '…' : _available.length})),
                 ],
               ),
       ),
@@ -343,7 +350,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
                       color: Colors.red,
                     ),
                     const SizedBox(height: 12),
-                    Text('削刮器包查询失败', style: theme.textTheme.titleMedium),
+                    Text(tr('削刮器包查询失败'), style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     Text(
                       _error!,
@@ -354,7 +361,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
                     FilledButton.icon(
                       onPressed: _load,
                       icon: const Icon(Icons.refresh),
-                      label: const Text('重试'),
+                      label:  Text(tr('重试')),
                     ),
                   ],
                 ),
@@ -371,7 +378,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
     if (_installed.isEmpty) {
       return Center(
         child: Text(
-          '未安装削刮器包',
+          tr('未安装削刮器包'),
           style: theme.textTheme.bodyLarge?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -401,8 +408,8 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
                 child: TextField(
                   controller: _sourceCtl,
                   enabled: !_installing,
-                  decoration: const InputDecoration(
-                    labelText: '包索引地址',
+                  decoration:  InputDecoration(
+                    labelText: tr('包索引地址'),
                     hintText: '…/index.yml',
                     isDense: true,
                     border: OutlineInputBorder(),
@@ -413,7 +420,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
               const SizedBox(width: 8),
               FilledButton(
                 onPressed: _availBusy || _installing ? null : _loadAvailable,
-                child: const Text('加载'),
+                child:  Text(tr('加载')),
               ),
             ],
           ),
@@ -448,7 +455,8 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
             controller: _searchCtl,
             enabled: !_installing,
             decoration: InputDecoration(
-              labelText: '在已加载的 ${_available.length} 个包里搜索',
+              labelText: tr('在已加载的 {count} 个包里搜索',
+                  {'count': _available.length}),
               isDense: true,
               prefixIcon: const Icon(Icons.search),
               border: const OutlineInputBorder(),
@@ -476,7 +484,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
                   child: Padding(
                     padding: const EdgeInsets.all(24),
                     child: Text(
-                      '可安装包加载失败：$_availError',
+                      tr('可安装包加载失败：{error}', {'error': _availError}),
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodySmall,
                     ),
@@ -485,7 +493,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
               : list.isEmpty
               ? Center(
                   child: Text(
-                    _available.isEmpty ? '该索引没有可安装的包' : '没有匹配的包',
+                    _available.isEmpty ? tr('该索引没有可安装的包') : tr('没有匹配的包'),
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -508,13 +516,13 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
                     onPressed: _installing
                         ? null
                         : () => setState(_picked.clear),
-                    child: const Text('清空'),
+                    child:  Text(tr('清空')),
                   ),
                   const Spacer(),
                   FilledButton.icon(
                     onPressed: _installing ? null : _install,
                     icon: const Icon(Icons.download),
-                    label: Text('安装 ${_picked.length} 个'),
+                    label: Text(tr('安装 {count} 个', {'count': _picked.length})),
                   ),
                 ],
               ),
@@ -560,7 +568,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
             ),
             if (installed)
               Text(
-                '已安装',
+                tr('已安装'),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -629,7 +637,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
         if (p.requires.isNotEmpty) ...[
           const SizedBox(height: 4),
           Text(
-            '依赖：${p.requires.join('、')}',
+            tr('依赖：{deps}', {'deps': p.requires.join('、')}),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

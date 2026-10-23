@@ -7,6 +7,7 @@ import 'adaptive_grid.dart';
 import '../widgets/zh_toolbar.dart';
 import 'studio_create_page.dart';
 import 'studio_detail_page.dart';
+import '../l10n/l10n.dart';
 
 /// 工作室列表页：行式列表 + 翻页 + 搜索。
 class StudioListPage extends StatefulWidget {
@@ -32,13 +33,13 @@ class _StudioListPageState extends State<StudioListPage> {
   String _direction = 'ASC';
 
   /// 排序选项（Stash 0.31.1 Studio 排序白名单内的常用字段）。
-  static const List<(String, String)> _sortOptions = [
-    ('name', '名称'),
-    ('scenes_count', '短片数'),
-    ('rating', '评分'),
-    ('created_at', '添加时间'),
-    ('updated_at', '更新时间'),
-    ('latest_scene', '最近短片'),
+  static List<(String, String)> get _sortOptions => [
+    ('name', tr('名称')),
+    ('scenes_count', tr('短片数')),
+    ('rating', tr('评分')),
+    ('created_at', tr('添加时间')),
+    ('updated_at', tr('更新时间')),
+    ('latest_scene', tr('最近短片')),
   ];
 
   String get _sortLabel {
@@ -141,7 +142,7 @@ class _StudioListPageState extends State<StudioListPage> {
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
                 child: Row(children: [
                   Expanded(
-                    child: Text('排序方式',
+                    child: Text(tr('排序方式'),
                         style: theme.textTheme.titleMedium),
                   ),
                   TextButton.icon(
@@ -155,7 +156,7 @@ class _StudioListPageState extends State<StudioListPage> {
                       size: 16,
                     ),
                     label: Text(
-                      _direction == 'DESC' ? '从新到旧' : '从旧到新',
+                      _direction == 'DESC' ? tr('从新到旧') : tr('从旧到新'),
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -247,7 +248,7 @@ class _StudioListPageState extends State<StudioListPage> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 18),
         child: Text(
-          _error.isNotEmpty ? '加载失败，上拉重试' : '已经到底了',
+          _error.isNotEmpty ? tr('加载失败，上拉重试') : tr('已经到底了'),
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
@@ -270,12 +271,12 @@ class _StudioListPageState extends State<StudioListPage> {
               onChanged: (v) => setState(() => _query = v),
               onSubmitted: (_) => _reload(),
               decoration: InputDecoration(
-                hintText: '搜索工作室',
+                hintText: tr('搜索工作室'),
                 isDense: true,
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: '清空',
+                        tooltip: tr('清空'),
                         icon: const Icon(Icons.clear, size: 16),
                         onPressed: () {
                           _searchCtrl.clear();
@@ -293,7 +294,7 @@ class _StudioListPageState extends State<StudioListPage> {
               style:
                   FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10)),
               onPressed: _reload,
-              child: const Text('搜索', style: TextStyle(fontSize: 12)),
+              child:  Text(tr('搜索'), style: TextStyle(fontSize: 12)),
             ),
           ),
           const SizedBox(width: 6),
@@ -317,7 +318,7 @@ class _StudioListPageState extends State<StudioListPage> {
                   OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
               onPressed: _openCreate,
               icon: const Icon(Icons.add, size: 15),
-              label: const Text('添加', style: TextStyle(fontSize: 12)),
+              label:  Text(tr('添加'), style: TextStyle(fontSize: 12)),
             ),
           ),
         ]),
@@ -326,7 +327,7 @@ class _StudioListPageState extends State<StudioListPage> {
         child: _items.isEmpty && !_loadingMore
             ? StatusView(
                 loading: _loading,
-                empty: _error.isNotEmpty ? _error : '没有工作室',
+                empty: _error.isNotEmpty ? _error : tr('没有工作室'),
                 error: _error,
                 onRetry: _reload)
             : RefreshIndicator(
@@ -372,7 +373,7 @@ class _StudioListPageState extends State<StudioListPage> {
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         Text(
-                          '${s.sceneCount} 个短片',
+                          tr('{count} 个短片', {'count': s.sceneCount}),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
@@ -393,7 +394,10 @@ class _StudioListPageState extends State<StudioListPage> {
 
     if (widget.embedded) return Scaffold(body: body);
     return Scaffold(
-        appBar: AppBar(title: Text(_total > 0 ? '工作室 ($_total)' : '工作室')),
+        appBar: AppBar(
+        title: Text(_total > 0
+            ? tr('工作室 ({total})', {'total': _total})
+            : tr('工作室'))),
         body: body);
   }
 }

@@ -8,6 +8,7 @@ import 'adaptive_grid.dart';
 import '../widgets/zh_toolbar.dart';
 import 'scene_detail_page.dart';
 import 'scene_filter_sheet.dart';
+import '../l10n/l10n.dart';
 
 /// 短片列表页：单列大卡片（web app 样式）+ 无限滚动 + 搜索 + 排序 + 筛选 + 批量操作。
 /// [onlyOrganized] 为 true 时固定显示已收藏（organized）短片，作为独立收藏页。
@@ -40,17 +41,18 @@ class _SceneListPageState extends State<SceneListPage> {
   String _direction = 'DESC';
 
   /// 排序选项（与 Stash 0.31.1 SceneSorter 对齐：date_added→created_at、file_size→filesize、studio_name→studio）。
-  static const List<(String, String)> _sortOptions = [
-    ('date', '发行日期'),
-    ('created_at', '添加时间'),
-    ('title', '标题'),
-    ('rating', '评分'),
-    ('o_counter', '播放次数'),
-    ('duration', '时长'),
-    ('filesize', '文件大小'),
-    ('performer_count', '演员数'),
-    ('studio', '工作室'),
-    ('tag_count', '标签数'),
+  static List<(String, String)> get _sortOptions => [
+    ('date', tr('发行日期')),
+    ('created_at', tr('添加时间')),
+    ('title', tr('标题')),
+    ('rating', tr('评分')),
+    ('play_count', tr('播放次数')),
+    ('o_counter', tr('O 计数')),
+    ('duration', tr('时长')),
+    ('filesize', tr('文件大小')),
+    ('performer_count', tr('演员数')),
+    ('studio', tr('工作室')),
+    ('tag_count', tr('标签数')),
   ];
 
   SceneFilterState _filter = SceneFilterState();
@@ -200,7 +202,7 @@ class _SceneListPageState extends State<SceneListPage> {
 
   String get _filterSummary {
     final n = _filter.activeCount;
-    return n > 0 ? '筛选 ($n)' : '筛选';
+    return n > 0 ? tr('筛选 ({count})', {'count': n}) : tr('筛选');
   }
 
   // ---------- 批量 ----------
@@ -266,7 +268,28 @@ class _SceneListPageState extends State<SceneListPage> {
       final (done, failed, aborted) = await _fanOut(_selected.toList(),
           (id) => _api.updateScene({'id': id, 'organized': target}));
       if (!mounted) return;
-      _finishBatch('${target ? "已收藏" : "已取消收藏"} $done 个', failed,
+      _finishBatch(
+          target
+              ? tr('已收藏 {count} 个', {'count': done})
+              : tr('已取消收藏 {count} 个', {'count': done}),
+          failed,
+          aborted: aborted);
+    } finally {
+      if (mounted && _batchBusy) setState(() => _batchBusy = false);
+    }
+  }
+
+  /// 批量标记已看：Stash 没有批量接口，逐个加一条播放记录。
+  Future<void> _batchPlayed() async {
+    if (_selected.isEmpty || _batchBusy) return;
+    setState(() => _batchBusy = true);
+    try {
+      final (done, failed, aborted) =
+          await _fanOut(_selected.toList(), (id) async {
+        await _api.markScenePlayed(id);
+      });
+      if (!mounted) return;
+      _finishBatch(tr('已标记 {count} 个为已看', {'count': done}), failed,
           aborted: aborted);
     } finally {
       if (mounted && _batchBusy) setState(() => _batchBusy = false);
@@ -280,10 +303,12 @@ class _SceneListPageState extends State<SceneListPage> {
     try {
       await _api.generateCovers(_selected.toList());
       if (!mounted) return;
-      showToast(context, '已提交 ${_selected.length} 个短片的封面生成任务');
+      showToast(context,
+          tr('已提交 {count} 个短片的封面生成任务', {'count': _selected.length}));
     } catch (e) {
       if (!mounted) return;
-      showToast(context, '生成封面失败：$e', error: true);
+      showToast(context, tr('生成封面失败：{error}', {'error': e}),
+          error: true);
     } finally {
       if (mounted) setState(() => _batchBusy = false);
     }
@@ -296,7 +321,8 @@ class _SceneListPageState extends State<SceneListPage> {
       final (done, failed, aborted) = await _fanOut(_selected.toList(),
           (id) => _api.updateScene({'id': id, 'rating100': v}));
       if (!mounted) return;
-      _finishBatch('已设置评分 $done 个', failed, aborted: aborted);
+      _finishBatch(tr('已设置评分 {count} 个', {'count': done}), failed,
+          aborted: aborted);
     } finally {
       if (mounted && _batchBusy) setState(() => _batchBusy = false);
     }
@@ -316,7 +342,11 @@ class _SceneListPageState extends State<SceneListPage> {
         await _api.updateScene({'id': id, 'tag_ids': next.toList()});
       });
       if (!mounted) return;
-      _finishBatch('${add ? "已添加标签" : "已移除标签"} $done 个', failed,
+      _finishBatch(
+          add
+              ? tr('已添加标签 {count} 个', {'count': done})
+              : tr('已移除标签 {count} 个', {'count': done}),
+          failed,
           aborted: aborted);
     } finally {
       if (mounted && _batchBusy) setState(() => _batchBusy = false);
@@ -326,7 +356,7 @@ class _SceneListPageState extends State<SceneListPage> {
   /// 结束批量：中止时保留勾选，方便用户在链路恢复后重试。
   void _finishBatch(String okText, int failed, {bool aborted = false}) {
     final tail = failed > 0
-        ? '，$failed 个失败${aborted ? '（已中止）' : ''}'
+        ? '${tr('，{failed} 个失败', {'failed': failed})}${aborted ? tr('（已中止）') : ''}'
         : '';
     showToast(context, '$okText$tail', error: failed > 0);
     setState(() {
@@ -354,12 +384,12 @@ class _SceneListPageState extends State<SceneListPage> {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
               child: Row(children: [
                 Expanded(
-                  child: Text('选择要保留的短片',
+                  child: Text(tr('选择要保留的短片'),
                       style: Theme.of(ctx).textTheme.titleMedium),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('取消'),
+                  child:  Text(tr('取消')),
                 ),
               ]),
             ),
@@ -402,10 +432,10 @@ class _SceneListPageState extends State<SceneListPage> {
           scenes.where((s) => s.id != picked).map((s) => s.id).toList(),
           picked);
       if (!mounted) return;
-      _finishBatch('已合并 ${scenes.length} 个短片', 0);
+      _finishBatch(tr('已合并 {count} 个短片', {'count': scenes.length}), 0);
     } catch (e) {
       if (!mounted) return;
-      showToast(context, '合并失败：$e', error: true);
+      showToast(context, tr('合并失败：{error}', {'error': e}), error: true);
     } finally {
       if (mounted && _batchBusy) setState(() => _batchBusy = false);
     }
@@ -422,7 +452,7 @@ class _SceneListPageState extends State<SceneListPage> {
     if (!mounted) return;
     final picks = await showMultiSelectSheet(
       context,
-      title: add ? '选择要添加的标签' : '选择要移除的标签',
+      title: add ? tr('选择要添加的标签') : tr('选择要移除的标签'),
       options: [for (final t in _allTags) (t.id, t.name)],
       selected: const <String>{},
     );
@@ -446,13 +476,14 @@ class _SceneListPageState extends State<SceneListPage> {
     try {
       studios = await _api.allStudios();
     } catch (e) {
-      if (mounted) showToast(context, '加载工作室失败：$e', error: true);
+      if (mounted) showToast(context, tr('加载工作室失败：{error}', {'error': e}),
+          error: true);
       return;
     }
     if (!mounted) return;
     final picked = await showSingleSelectSheet(
       context,
-      title: '选择工作室',
+      title: tr('选择工作室'),
       options: [for (final s in studios) (s.id, s.name)],
     );
     if (picked == null || !mounted || _batchBusy) return;
@@ -461,7 +492,7 @@ class _SceneListPageState extends State<SceneListPage> {
         _selectedScenes.where((s) => s.studio == null).map((s) => s.id).toList();
     final skipped = _selected.length - targets.length;
     if (targets.isEmpty) {
-      showToast(context, '所选短片都已有工作室，无需设置');
+      showToast(context, tr('所选短片都已有工作室，无需设置'));
       return;
     }
     setState(() => _batchBusy = true);
@@ -470,8 +501,10 @@ class _SceneListPageState extends State<SceneListPage> {
           (id) => _api.updateScene({'id': id, 'studio_id': picked}));
       if (!mounted) return;
       _finishBatch(
-          '已设置工作室 $done 个'
-          '${skipped > 0 ? '，跳过已有工作室 $skipped 个' : ''}',
+          tr('已设置工作室 {count} 个', {'count': done}) +
+              (skipped > 0
+                  ? tr('，跳过已有工作室 {skipped} 个', {'skipped': skipped})
+                  : ''),
           failed,
           aborted: aborted);
     } finally {
@@ -486,13 +519,14 @@ class _SceneListPageState extends State<SceneListPage> {
     try {
       performers = await _api.allPerformers();
     } catch (e) {
-      if (mounted) showToast(context, '加载演员失败：$e', error: true);
+      if (mounted) showToast(context, tr('加载演员失败：{error}', {'error': e}),
+          error: true);
       return;
     }
     if (!mounted) return;
     final picks = await showMultiSelectSheet(
       context,
-      title: '选择要添加的演员',
+      title: tr('选择要添加的演员'),
       options: [for (final p in performers) (p.id, p.name)],
       selected: const <String>{},
     );
@@ -503,7 +537,7 @@ class _SceneListPageState extends State<SceneListPage> {
         .toList();
     final skipped = _selected.length - targets.length;
     if (targets.isEmpty) {
-      showToast(context, '所选短片都已含这些演员，无需添加');
+      showToast(context, tr('所选短片都已含这些演员，无需添加'));
       return;
     }
     final byId = {for (final s in targets) s.id: s};
@@ -517,8 +551,11 @@ class _SceneListPageState extends State<SceneListPage> {
       });
       if (!mounted) return;
       _finishBatch(
-          '已添加演员 $done 个'
-          '${skipped > 0 ? '，跳过已含全部所选演员 $skipped 个' : ''}',
+          tr('已添加演员 {count} 个', {'count': done}) +
+              (skipped > 0
+                  ? tr('，跳过已含全部所选演员 {skipped} 个',
+                      {'skipped': skipped})
+                  : ''),
           failed,
           aborted: aborted);
     } finally {
@@ -541,7 +578,7 @@ class _SceneListPageState extends State<SceneListPage> {
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
                 child: Row(children: [
                   Expanded(
-                    child: Text('排序方式',
+                    child: Text(tr('排序方式'),
                         style: theme.textTheme.titleMedium),
                   ),
                   TextButton.icon(
@@ -555,7 +592,7 @@ class _SceneListPageState extends State<SceneListPage> {
                       size: 16,
                     ),
                     label: Text(
-                      _direction == 'DESC' ? '从新到旧' : '从旧到新',
+                      _direction == 'DESC' ? tr('从新到旧') : tr('从旧到新'),
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -645,12 +682,12 @@ class _SceneListPageState extends State<SceneListPage> {
             onSubmitted: (_) => _reload(),
             onChanged: (v) => setState(() => _query = v),
             decoration: InputDecoration(
-              hintText: '搜索标题 / 演员 / 标签',
+              hintText: tr('搜索标题 / 演员 / 标签'),
               isDense: true,
               suffixIcon: _query.isEmpty
                   ? null
                   : IconButton(
-                      tooltip: '清空',
+                      tooltip: tr('清空'),
                       icon: const Icon(Icons.clear, size: 16),
                       onPressed: () {
                         _searchCtrl.clear();
@@ -668,7 +705,7 @@ class _SceneListPageState extends State<SceneListPage> {
             style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 10)),
             onPressed: _reload,
-            child: const Text('搜索', style: TextStyle(fontSize: 12)),
+            child:  Text(tr('搜索'), style: TextStyle(fontSize: 12)),
           ),
         ),
       ]),
@@ -742,7 +779,7 @@ class _SceneListPageState extends State<SceneListPage> {
                       }
                     });
                   },
-            child: Text(_selectMode ? '取消' : '多选',
+            child: Text(_selectMode ? tr('取消') : tr('多选'),
                 style: const TextStyle(fontSize: 12)),
           ),
         ),
@@ -768,7 +805,7 @@ class _SceneListPageState extends State<SceneListPage> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 18),
         child: Text(
-          _error.isNotEmpty ? '加载失败，上拉重试' : '已经到底了',
+          _error.isNotEmpty ? tr('加载失败，上拉重试') : tr('已经到底了'),
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
@@ -806,6 +843,7 @@ class _SceneListPageState extends State<SceneListPage> {
         scrollDirection: Axis.horizontal,
         child: Row(children: [
           // 状态提示置于最前：横向滚动时始终可见。
+          // 全选与高频批量（已看/标签/工作室/演员）在前，低频操作置尾；
           // 未勾选 → 除「全选」外全部置灰（有意为之）；批量执行中 → 全部置灰并显示进度。
           if (_batchBusy) ...[
             const SizedBox(
@@ -813,61 +851,66 @@ class _SceneListPageState extends State<SceneListPage> {
                 height: 12,
                 child: CircularProgressIndicator(strokeWidth: 2)),
             const SizedBox(width: 6),
-            Text('处理中…', style: theme.textTheme.bodySmall),
+            Text(tr('处理中…'), style: theme.textTheme.bodySmall),
           ] else
             Text(
-              _selected.isEmpty ? '请先勾选短片' : '已选 ${_selected.length}',
+              _selected.isEmpty
+                  ? tr('请先勾选短片')
+                  : tr('已选 {count}', {'count': _selected.length}),
               style: theme.textTheme.bodySmall,
             ),
           const SizedBox(width: 8),
           btn(
-            label: _allSelectedOrganized ? '取消收藏' : '收藏',
+            label: tr('全选'),
+            onPressed: (_scenes.isEmpty || _batchBusy)
+                ? null
+                : () {
+                    _toggleSelectAll();
+                  },
+          ),
+          const SizedBox(width: 4),
+          btn(
+            label: tr('已看'),
+            onPressed: has ? _batchPlayed : null,
+          ),
+          const SizedBox(width: 4),
+          btn(
+            label: tr('标签'),
+            onPressed: has ? () => _openTagSheet(true) : null,
+          ),
+          const SizedBox(width: 4),
+          btn(
+            label: tr('工作室'),
+            onPressed: has ? _batchStudio : null,
+          ),
+          const SizedBox(width: 4),
+          btn(
+            label: tr('演员'),
+            onPressed: has ? _batchPerformers : null,
+          ),
+          // 低频操作置尾：收藏 / 合并 / 评分 / 封面。
+          const SizedBox(width: 4),
+          btn(
+            label: _allSelectedOrganized ? tr('取消收藏') : tr('收藏'),
             onPressed: has ? () => _batchFav(!_allSelectedOrganized) : null,
             width: 68,
           ),
           const SizedBox(width: 4),
           btn(
-            label: '评分',
-            onPressed: has ? _pickRating : null,
-          ),
-          const SizedBox(width: 4),
-          btn(
-            label: '标签',
-            onPressed: has ? () => _openTagSheet(true) : null,
-          ),
-          const SizedBox(width: 4),
-          btn(
-            label: '工作室',
-            onPressed: has ? _batchStudio : null,
-            width: 56,
-          ),
-          const SizedBox(width: 4),
-          btn(
-            label: '演员',
-            onPressed: has ? _batchPerformers : null,
-            width: 56,
-          ),
-          const SizedBox(width: 4),
-          btn(
-            label: '合并',
+            label: tr('合并'),
             onPressed: (_selected.length >= 2 && !_batchBusy)
                 ? _batchMerge
                 : null,
           ),
           const SizedBox(width: 4),
           btn(
-            label: '封面',
-            onPressed: has ? _batchCovers : null,
-            width: 56,
+            label: tr('评分'),
+            onPressed: has ? _pickRating : null,
           ),
           const SizedBox(width: 4),
           btn(
-            label: '全选',
-            onPressed: (_scenes.isEmpty || _batchBusy)
-                ? null
-                : () {
-                    _toggleSelectAll();
-                  },
+            label: tr('封面'),
+            onPressed: has ? _batchCovers : null,
           ),
         ]),
       ),
@@ -883,7 +926,7 @@ class _SceneListPageState extends State<SceneListPage> {
         child: _scenes.isEmpty && !_loadingMore
             ? StatusView(
                 loading: _loading,
-                empty: _error.isNotEmpty ? _error : '没有短片',
+                empty: _error.isNotEmpty ? _error : tr('没有短片'),
                 error: _error,
                 onRetry: _reload,
               )
@@ -962,7 +1005,7 @@ class _SceneListPageState extends State<SceneListPage> {
       appBar: AppBar(
           title: Text(_total > 0
               ? '${widget.onlyOrganized ? '收藏' : '短片'} ($_total)'
-              : widget.onlyOrganized ? '收藏' : '短片')),
+              : widget.onlyOrganized ? tr('收藏') : tr('短片'))),
       body: body,
     );
   }
@@ -986,7 +1029,7 @@ class _RatingSheet extends StatelessWidget {
             ),
           ListTile(
             dense: true,
-            title: const Text('清除评分'),
+            title:  Text(tr('清除评分')),
             onTap: () => Navigator.pop(context, 0),
           ),
         ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/common.dart';
+import '../l10n/l10n.dart';
 
 /// 插件管理页：列出 Stash 服务端已安装插件（名称/版本/启停/描述/任务与钩子）。
 /// 仅做只读展示；启停需改服务端 config 并重启，不在移动端处理。
@@ -48,10 +49,10 @@ class _PluginsPageState extends State<PluginsPage> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('插件 (${_busy ? '…' : _plugins.length})'),
+        title: Text(tr('插件 ({count})', {'count': _busy ? '…' : _plugins.length})),
         actions: [
           IconButton(
-            tooltip: '刷新',
+            tooltip: tr('刷新'),
             icon: const Icon(Icons.refresh),
             onPressed: _busy ? null : _load,
           ),
@@ -69,7 +70,7 @@ class _PluginsPageState extends State<PluginsPage> {
                         const Icon(Icons.error_outline,
                             size: 40, color: Colors.red),
                         const SizedBox(height: 12),
-                        Text('插件列表查询失败',
+                        Text(tr('插件列表查询失败'),
                             style: theme.textTheme.titleMedium),
                         const SizedBox(height: 8),
                         Text(_error!,
@@ -79,7 +80,7 @@ class _PluginsPageState extends State<PluginsPage> {
                         FilledButton.icon(
                           onPressed: _load,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('重试'),
+                          label:  Text(tr('重试')),
                         ),
                       ],
                     ),
@@ -87,7 +88,7 @@ class _PluginsPageState extends State<PluginsPage> {
                 )
               : _plugins.isEmpty
                   ? Center(
-                      child: Text('未安装插件',
+                      child: Text(tr('未安装插件'),
                           style: theme.textTheme.bodyLarge?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant)),
                     )
@@ -104,7 +105,7 @@ class _PluginsPageState extends State<PluginsPage> {
   }
 
   Widget _card(ThemeData theme, Map p) {
-    final name = p['name']?.toString() ?? p['id']?.toString() ?? '(未命名)';
+    final name = p['name']?.toString() ?? p['id']?.toString() ?? tr('(未命名)');
     final version = p['version']?.toString() ?? '';
     final desc = p['description']?.toString() ?? '';
     final enabled = p['enabled'] == true;
@@ -158,9 +159,11 @@ class _PluginsPageState extends State<PluginsPage> {
               spacing: 8,
               children: [
                 _chip(theme, Icons.extension_outlined,
-                    enabled ? '已启用' : '已停用'),
-                if (tasks > 0) _chip(theme, Icons.task_alt, '$tasks 任务'),
-                if (hooks > 0) _chip(theme, Icons.link, '$hooks 钩子'),
+                    enabled ? tr('已启用') : tr('已停用')),
+                if (tasks > 0)
+                  _chip(theme, Icons.task_alt, tr('{tasks} 任务', {'tasks': tasks})),
+                if (hooks > 0)
+                  _chip(theme, Icons.link, tr('{hooks} 钩子', {'hooks': hooks})),
               ],
             ),
           ],

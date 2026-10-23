@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import 'scene_detail_page.dart';
+import '../l10n/l10n.dart';
 
 /// 去重（Duplicate Finder）：按 phash 距离 + 时长差查找疑似重复短片，
 /// 支持组内合并（保留一个）与删除。
@@ -58,17 +59,22 @@ class _DuplicatePageState extends State<DuplicatePage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('合并重复短片'),
+        title:  Text(tr('合并重复短片')),
         content: Text(
-          '将 ${sources.length} 个短片合并到「${destination.title.isNotEmpty ? destination.title : destination.id}」，'
-          '合并后保留元数据（演员/标签/收藏），多余文件从库中移除。\n\n继续吗？'),
+          tr('将 {count} 个短片合并到「{title}」，合并后保留元数据（演员/标签/收藏），多余文件从库中移除。\n\n继续吗？',
+              {
+                'count': sources.length,
+                'title': destination.title.isNotEmpty
+                    ? destination.title
+                    : destination.id,
+              })),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+              child:  Text(tr('取消'))),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('合并')),
+              child:  Text(tr('合并'))),
         ],
       ),
     );
@@ -77,12 +83,12 @@ class _DuplicatePageState extends State<DuplicatePage> {
       await buildApi().mergeScenes(sources, destination.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('合并完成，短片已从库中移除')));
+           SnackBar(content: Text(tr('合并完成，短片已从库中移除'))));
       _search();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('合并失败：$e')));
+          .showSnackBar(SnackBar(content: Text(tr('合并失败：{error}', {'error': e}))));
     }
   }
 
@@ -91,19 +97,19 @@ class _DuplicatePageState extends State<DuplicatePage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除短片'),
+        title:  Text(tr('删除短片')),
         content: Text(
-          '从媒体库删除「${scene.title.isNotEmpty ? scene.title : scene.id}」？\n'
-          '仅从库中移除记录，不删除磁盘文件。'),
+          tr('从媒体库删除「{title}」？\n仅从库中移除记录，不删除磁盘文件。',
+              {'title': scene.title.isNotEmpty ? scene.title : scene.id})),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+              child:  Text(tr('取消'))),
           FilledButton(
               style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFE5533D)),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('删除')),
+              child:  Text(tr('删除'))),
         ],
       ),
     );
@@ -112,12 +118,12 @@ class _DuplicatePageState extends State<DuplicatePage> {
       await buildApi().destroyScene(scene.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('已删除')));
+          .showSnackBar( SnackBar(content: Text(tr('已删除'))));
       _search();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('删除失败：$e')));
+          .showSnackBar(SnackBar(content: Text(tr('删除失败：{error}', {'error': e}))));
     }
   }
 
@@ -143,7 +149,7 @@ class _DuplicatePageState extends State<DuplicatePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('去重')),
+      appBar: AppBar(title:  Text(tr('去重'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
         children: [
@@ -158,21 +164,21 @@ class _DuplicatePageState extends State<DuplicatePage> {
                     Icon(Icons.filter_alt_outlined,
                         size: 20, color: theme.colorScheme.primary),
                     const SizedBox(width: 8),
-                    Text('匹配条件', style: theme.textTheme.titleMedium),
+                    Text(tr('匹配条件'), style: theme.textTheme.titleMedium),
                   ]),
                   const SizedBox(height: 4),
-                  Text('距离越小越严格（0=完全相同的帧）；时长差限制文件时长接近程度。',
+                  Text(tr('距离越小越严格（0=完全相同的帧）；时长差限制文件时长接近程度。'),
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                   const SizedBox(height: 10),
-                  Text('phash 距离', style: theme.textTheme.bodySmall),
+                  Text(tr('phash 距离'), style: theme.textTheme.bodySmall),
                   const SizedBox(height: 4),
                   SegmentedButton<int>(
-                    segments: const [
-                      ButtonSegment(value: 0, label: Text('精确')),
-                      ButtonSegment(value: 8, label: Text('非常接近')),
-                      ButtonSegment(value: 16, label: Text('接近')),
-                      ButtonSegment(value: 24, label: Text('较远')),
+                    segments:  [
+                      ButtonSegment(value: 0, label: Text(tr('精确'))),
+                      ButtonSegment(value: 8, label: Text(tr('非常接近'))),
+                      ButtonSegment(value: 16, label: Text(tr('接近'))),
+                      ButtonSegment(value: 24, label: Text(tr('较远'))),
                     ],
                     selected: {_distance},
                     showSelectedIcon: false,
@@ -182,7 +188,7 @@ class _DuplicatePageState extends State<DuplicatePage> {
                         setState(() => _distance = s.first),
                   ),
                   const SizedBox(height: 10),
-                  Text('时长差（秒）', style: theme.textTheme.bodySmall),
+                  Text(tr('时长差（秒）'), style: theme.textTheme.bodySmall),
                   const SizedBox(height: 4),
                   SegmentedButton<double>(
                     segments: const [
@@ -210,7 +216,7 @@ class _DuplicatePageState extends State<DuplicatePage> {
                             child:
                                 CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.search, size: 20),
-                    label: Text(_searching ? '搜索中…' : '查找重复短片'),
+                    label: Text(_searching ? tr('搜索中…') : tr('查找重复短片')),
                   ),
                 ],
               ),
@@ -219,7 +225,7 @@ class _DuplicatePageState extends State<DuplicatePage> {
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text('搜索失败：$_error',
+              child: Text(tr('搜索失败：{error}', {'error': _error}),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: const Color(0xFFE5533D))),
             ),
@@ -227,7 +233,7 @@ class _DuplicatePageState extends State<DuplicatePage> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
               child: Center(
-                child: Text('未搜索。设置匹配条件后点击「查找重复短片」。',
+                child: Text(tr('未搜索。设置匹配条件后点击「查找重复短片」。'),
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               ),
@@ -235,7 +241,7 @@ class _DuplicatePageState extends State<DuplicatePage> {
           if (_groups.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text('发现 ${_groups.length} 组疑似重复',
+              child: Text(tr('发现 {count} 组疑似重复', {'count': _groups.length}),
                   style: theme.textTheme.titleMedium),
             ),
           for (var gi = 0; gi < _groups.length; gi++)
@@ -258,14 +264,16 @@ class _DuplicatePageState extends State<DuplicatePage> {
             Row(children: [
               Icon(Icons.content_copy, size: 18, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
-              Text('重复组 ${groupIdx + 1}（${group.length} 个短片）',
+              Text(
+                  tr('重复组 {index}（{count} 个短片）',
+                      {'index': groupIdx + 1, 'count': group.length}),
                   style: theme.textTheme.titleSmall),
               const Spacer(),
               if (group.length > 1)
                 TextButton.icon(
                   onPressed: () => _merge(groupIdx),
                   icon: const Icon(Icons.merge, size: 16),
-                  label: const Text('合并到保留项',
+                  label:  Text(tr('合并到保留项'),
                       style: TextStyle(fontSize: 12)),
                 ),
             ]),
@@ -366,7 +374,7 @@ class _DuplicatePageState extends State<DuplicatePage> {
                           : theme.colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 2),
-                    Text(keep == sceneIdx ? '保留' : '保留?',
+                    Text(keep == sceneIdx ? tr('保留') : tr('保留?'),
                         style: TextStyle(
                             fontSize: 10,
                             color: theme.colorScheme.onSurfaceVariant)),
@@ -374,7 +382,7 @@ class _DuplicatePageState extends State<DuplicatePage> {
                 ),
                 const SizedBox(width: 4),
                 IconButton(
-                  tooltip: '删除此短片',
+                  tooltip: tr('删除此短片'),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.delete_outline,
                       size: 17, color: Color(0xFFE5533D)),

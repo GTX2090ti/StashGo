@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import 'net_log.dart';
+import '../l10n/l10n.dart';
 
 /// 是否为「链路层」失败：只有这类失败才值得重建会话 / 重新选路
 /// （业务错误 HTTP 401 / GraphQL errors / 解析失败说明链路是通的，换地址也没用）。
@@ -33,7 +34,7 @@ class ApiSession {
     _client = http.Client();
     old.close();
     NetLog.instance.record(
-        category: 'Network', level: 'WARN', title: '重建网络会话', message: reason);
+        category: 'Network', level: 'WARN', title: tr('重建网络会话'), message: reason);
   }
 }
 

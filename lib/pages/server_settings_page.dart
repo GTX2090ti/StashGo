@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../settings/app_settings.dart';
 import '../widgets/common.dart';
 import 'login_page.dart';
+import '../l10n/l10n.dart';
 
 /// 服务器设置子页：服务器档案 + 生效地址 + 连接状态。
 class ServerSettingsPage extends StatefulWidget {
@@ -36,9 +37,10 @@ class _ServerSettingsPageState extends State<ServerSettingsPage> {
     final lat = slot == AddrSlot.lan ? _cfg.lanLatencyMs : _cfg.wanLatencyMs;
     var s = slot.label;
     if (_cfg.activeSlot == slot) s = '✓ $s';
-    s += '（${url.isEmpty ? "未配置" : normalizeLabel(url)}）';
+    s += tr('（{value}）',
+        {'value': url.isEmpty ? tr('未配置') : normalizeLabel(url)});
     if (lat >= 0) s += ' · ${lat}ms';
-    if (lat == -2) s += ' · 不可达';
+    if (lat == -2) s += tr(' · 不可达');
     return s;
   }
 
@@ -57,21 +59,21 @@ class _ServerSettingsPageState extends State<ServerSettingsPage> {
   Future<void> _deleteProfile(Profile p) async {
     final cfg = AppSettings.instance;
     if (cfg.profiles.length <= 1) {
-      showToast(context, '至少保留一个档案', error: true);
+      showToast(context, tr('至少保留一个档案'), error: true);
       return;
     }
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('删除连接「${p.name}」？'),
-        content: const Text('删除后需重新填写地址与 API Key。'),
+        title: Text(tr('删除连接「{name}」？', {'name': p.name})),
+        content:  Text(tr('删除后需重新填写地址与 API Key。')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+              child:  Text(tr('取消'))),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('删除')),
+              child:  Text(tr('删除'))),
         ],
       ),
     );
@@ -85,17 +87,17 @@ class _ServerSettingsPageState extends State<ServerSettingsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('服务器')),
+      appBar: AppBar(title:  Text(tr('服务器'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('服务器档案', style: theme.textTheme.titleMedium),
+          Text(tr('服务器档案'), style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           if (_cfg.profiles.isEmpty)
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.person_outline),
-              title: const Text('尚未配置'),
+              title:  Text(tr('尚未配置')),
               trailing: const Icon(Icons.chevron_right),
               onTap: _editProfile,
             )
@@ -119,12 +121,12 @@ class _ServerSettingsPageState extends State<ServerSettingsPage> {
                   children: [
                     if (_cfg.profiles.length > 1)
                       IconButton(
-                        tooltip: '删除',
+                        tooltip: tr('删除'),
                         icon: const Icon(Icons.delete_outline),
                         onPressed: () => _deleteProfile(p),
                       ),
                     IconButton(
-                      tooltip: '编辑',
+                      tooltip: tr('编辑'),
                       icon: const Icon(Icons.edit_outlined),
                       onPressed: _editProfile,
                     ),
@@ -134,7 +136,7 @@ class _ServerSettingsPageState extends State<ServerSettingsPage> {
           OutlinedButton.icon(
             onPressed: _editProfile,
             icon: const Icon(Icons.add),
-            label: const Text('添加 / 编辑连接'),
+            label:  Text(tr('添加 / 编辑连接')),
           ),
 
           const Divider(height: 24),
@@ -154,10 +156,10 @@ class _ServerSettingsPageState extends State<ServerSettingsPage> {
             contentPadding: EdgeInsets.zero,
             dense: true,
             value: _cfg.manualLock,
-            title: const Text('手动锁定当前地址'),
+            title:  Text(tr('手动锁定当前地址')),
             subtitle: Text(_cfg.manualLock
-                ? '已锁定，自动选路不会覆盖'
-                : '自动选择（优先内网，不可达自动切外网）'),
+                ? tr('已锁定，自动选路不会覆盖')
+                : tr('自动选择（优先内网，不可达自动切外网）')),
             onChanged: (v) async {
               if (v) {
                 await _cfg.setSlot(_cfg.activeSlot, true);
@@ -174,7 +176,7 @@ class _ServerSettingsPageState extends State<ServerSettingsPage> {
                     height: 14,
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.network_ping_outlined, size: 16),
-            label: Text(_cfg.isProbing ? '测速中…' : '重新测速'),
+            label: Text(_cfg.isProbing ? tr('测速中…') : tr('重新测速')),
           ),
           if (_cfg.lastSwitchReason.isNotEmpty)
             Padding(
@@ -185,19 +187,19 @@ class _ServerSettingsPageState extends State<ServerSettingsPage> {
             ),
 
           const SizedBox(height: 24),
-          Text('连接状态', style: theme.textTheme.titleMedium),
+          Text(tr('连接状态'), style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           FutureBuilder<String>(
             future: _cfg.hasProfile ? buildApi().version() : Future.value(''),
             builder: (context, snap) {
               if (!_cfg.hasProfile) {
-                return Text('未配置服务器', style: theme.textTheme.bodySmall);
+                return Text(tr('未配置服务器'), style: theme.textTheme.bodySmall);
               }
               if (snap.connectionState == ConnectionState.waiting) {
-                return Text('连接中…', style: theme.textTheme.bodySmall);
+                return Text(tr('连接中…'), style: theme.textTheme.bodySmall);
               }
               if (snap.hasError) {
-                return Text('连接失败：${snap.error}',
+                return Text(tr('连接失败：{error}', {'error': snap.error}),
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: const Color(0xFFE5533D)));
               }

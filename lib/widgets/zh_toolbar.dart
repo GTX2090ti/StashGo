@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/l10n.dart';
 
 /// 中文文本选择工具栏（复制 / 全选 / 粘贴）。
 /// 粘贴直接调用 Clipboard 读取并插入，避免鸿蒙上系统粘贴菜单偶发失效。
@@ -8,7 +9,7 @@ Widget zhContextMenuBuilder(BuildContext context, EditableTextState ets) {
     anchors: ets.contextMenuAnchors,
     buttonItems: <ContextMenuButtonItem>[
       ContextMenuButtonItem(
-        label: '复制',
+        label: tr('复制'),
         onPressed: () {
           final sel = ets.textEditingValue.selection;
           if (sel.isValid && !sel.isCollapsed) {
@@ -18,11 +19,11 @@ Widget zhContextMenuBuilder(BuildContext context, EditableTextState ets) {
         },
       ),
       ContextMenuButtonItem(
-        label: '全选',
+        label: tr('全选'),
         onPressed: () => ets.selectAll(SelectionChangedCause.toolbar),
       ),
       ContextMenuButtonItem(
-        label: '粘贴',
+        label: tr('粘贴'),
         onPressed: () async {
           ets.hideToolbar();
           final data = await Clipboard.getData(Clipboard.kTextPlain);

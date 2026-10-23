@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../settings/app_settings.dart';
+import '../l10n/l10n.dart';
 
 /// 服务器快速切换菜单（对齐 iOS ServerSwitcherMenu）：
 /// 档案切换 + 内网/外网槽位 + 手动锁定 + 重新测速。
@@ -21,7 +22,7 @@ class ServerSwitcherMenu extends StatelessWidget {
       await cfg.restoreAuto();
     } else if (key == 'probe') {
       await cfg.probeBoth();
-      await cfg.autoSelect('菜单重新测速');
+      await cfg.autoSelect(tr('菜单重新测速'));
     }
   }
 
@@ -29,7 +30,7 @@ class ServerSwitcherMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final cfg = AppSettings.instance;
     return PopupMenuButton<String>(
-      tooltip: '服务器',
+      tooltip: tr('服务器'),
       icon: const Icon(Icons.dns_outlined),
       onSelected: _handle,
       itemBuilder: (context) {
@@ -46,22 +47,32 @@ class ServerSwitcherMenu extends StatelessWidget {
         items.add(CheckedPopupMenuItem(
           value: 'slot:lan',
           checked: cfg.activeSlot == AddrSlot.lan,
-          child: Text(
-              '内网${cfg.lanUrl.isNotEmpty ? '（${cfg.lanLatencyMs >= 0 ? "${cfg.lanLatencyMs}ms" : "未测"}）' : ' · 未配置'}'),
+          child: Text(cfg.lanUrl.isNotEmpty
+              ? tr('内网（{latency}）', {
+                  'latency': cfg.lanLatencyMs >= 0
+                      ? '${cfg.lanLatencyMs}ms'
+                      : tr('未测'),
+                })
+              : '${tr('内网')}${tr(' · 未配置')}'),
         ));
         items.add(CheckedPopupMenuItem(
           value: 'slot:wan',
           checked: cfg.activeSlot == AddrSlot.wan,
-          child: Text(
-              '外网${cfg.wanUrl.isNotEmpty ? '（${cfg.wanLatencyMs >= 0 ? "${cfg.wanLatencyMs}ms" : "未测"}）' : ' · 未配置'}'),
+          child: Text(cfg.wanUrl.isNotEmpty
+              ? tr('外网（{latency}）', {
+                  'latency': cfg.wanLatencyMs >= 0
+                      ? '${cfg.wanLatencyMs}ms'
+                      : tr('未测'),
+                })
+              : '${tr('外网')}${tr(' · 未配置')}'),
         ));
         items.add(PopupMenuDivider());
         items.add(CheckedPopupMenuItem(
           value: cfg.manualLock ? 'unlock' : 'lock',
           checked: cfg.manualLock,
-          child: const Text('手动锁定当前地址'),
+          child:  Text(tr('手动锁定当前地址')),
         ));
-        items.add(const PopupMenuItem(value: 'probe', child: Text('重新测速')));
+        items.add( PopupMenuItem(value: 'probe', child: Text(tr('重新测速'))));
         if (cfg.lastSwitchReason.isNotEmpty) {
           items.add(PopupMenuItem(
             enabled: false,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/common.dart';
 import 'performer_form.dart';
+import '../l10n/l10n.dart';
 
 /// 演员编辑页。
 class PerformerEditPage extends StatelessWidget {
@@ -12,8 +13,8 @@ class PerformerEditPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PerformerForm(
         performerId: performerId,
-        title: '编辑演员',
-        submitLabel: '保存',
+        title: tr('编辑演员'),
+        submitLabel: tr('保存'),
         onSubmit: (ctx, input) async {
           await buildApi().updatePerformer(input);
           if (ctx.mounted) Navigator.pop(ctx, true);

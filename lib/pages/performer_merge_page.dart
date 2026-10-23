@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
+import '../l10n/l10n.dart';
 
 /// 演员合并页：搜索源演员（可多选）→ 合并到目标演员（performerMerge）。
 /// 用于处理同名/重复演员：源演员的短片、标签、别名等归并到目标，源条目删除。
@@ -57,7 +58,7 @@ class _PerformerMergePageState extends State<PerformerMergePage> {
       setState(() => _performers = r.items);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = '搜索失败：$e');
+      setState(() => _error = tr('搜索失败：{error}', {'error': e}));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -75,7 +76,7 @@ class _PerformerMergePageState extends State<PerformerMergePage> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = '合并失败：$e');
+      setState(() => _error = tr('合并失败：{error}', {'error': e}));
     } finally {
       if (mounted) setState(() => _merging = false);
     }
@@ -85,7 +86,7 @@ class _PerformerMergePageState extends State<PerformerMergePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('合并演员')),
+      appBar: AppBar(title:  Text(tr('合并演员'))),
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -96,14 +97,14 @@ class _PerformerMergePageState extends State<PerformerMergePage> {
             onChanged: (_) => setState(() {}),
             onSubmitted: (_) => _search(),
             decoration: InputDecoration(
-              hintText: '搜索演员',
+              hintText: tr('搜索演员'),
               isDense: true,
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (_ctrl.text.isNotEmpty)
                     IconButton(
-                      tooltip: '清空',
+                      tooltip: tr('清空'),
                       icon: const Icon(Icons.clear, size: 16),
                       onPressed: () {
                         _ctrl.clear();
@@ -125,7 +126,7 @@ class _PerformerMergePageState extends State<PerformerMergePage> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('已选 ${_selected.length} 个源演员',
+              child: Text(tr('已选 {count} 个源演员', {'count': _selected.length}),
                   style: theme.textTheme.bodySmall),
             ),
           ),
@@ -134,7 +135,7 @@ class _PerformerMergePageState extends State<PerformerMergePage> {
               ? StatusView(loading: true, empty: '', onRetry: _search)
               : _performers.isEmpty
                   ? StatusView(
-                      loading: false, empty: '没有匹配的演员', onRetry: _search)
+                      loading: false, empty: tr('没有匹配的演员'), onRetry: _search)
                   : ListView.builder(
                       itemCount: _performers.length,
                       itemBuilder: (_, i) {
@@ -159,7 +160,7 @@ class _PerformerMergePageState extends State<PerformerMergePage> {
                             if (isTarget)
                               Padding(
                                 padding: const EdgeInsets.only(left: 6),
-                                child: Text('目标',
+                                child: Text(tr('目标'),
                                     style: theme.textTheme.bodySmall?.copyWith(
                                         color: theme.colorScheme.primary,
                                         fontSize: 11)),
@@ -190,8 +191,11 @@ class _PerformerMergePageState extends State<PerformerMergePage> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Column(children: [
             Text(
-              '选择要并入「${widget.targetName.isEmpty ? "当前演员" : widget.targetName}」的源演员（可多选）。'
-              '合并后相关短片、标签、别名等归并到目标演员，源演员条目删除。',
+              tr('选择要并入「{name}」的源演员（可多选）。',
+                      {'name': widget.targetName.isEmpty
+                          ? tr('当前演员')
+                          : widget.targetName}) +
+                  tr('合并后相关短片、标签、别名等归并到目标演员，源演员条目删除。'),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -199,8 +203,8 @@ class _PerformerMergePageState extends State<PerformerMergePage> {
             FilledButton(
               onPressed: _merging || _selected.isEmpty ? null : _merge,
               child: Text(_merging
-                  ? '合并中…'
-                  : '合并 ${_selected.length} 个演员到当前演员'),
+                  ? tr('合并中…')
+                  : tr('合并 {count} 个演员到当前演员', {'count': _selected.length})),
             ),
           ]),
         ),

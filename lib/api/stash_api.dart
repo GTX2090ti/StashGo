@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import 'net_health.dart';
 import 'net_log.dart';
+import '../l10n/l10n.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -44,7 +45,8 @@ class StashApi {
       if (isConnectivity(e)) {
         final reason = _friendly(e);
         ApiSession.instance
-            .reset('查询链路失败（$reason），重建会话丢弃吊死连接');
+            .reset(tr('查询链路失败（{reason}），重建会话丢弃吊死连接',
+                {'reason': reason}));
         if (!isMutation) {
           try {
             final r = await _queryOnce(q, vars, timeout);
@@ -52,8 +54,9 @@ class StashApi {
             NetLog.instance.record(
                 category: 'Network',
                 level: 'WARN',
-                title: '自动重试成功',
-                message: '首次失败（$reason），重建会话后重试成功');
+                title: tr('自动重试成功'),
+                message: tr('首次失败（{reason}），重建会话后重试成功',
+                    {'reason': reason}));
             return r;
           } catch (_) {}
         }
@@ -65,7 +68,7 @@ class StashApi {
   }
 
   String _friendly(Object e) {
-    if (e is TimeoutException) return '超时';
+    if (e is TimeoutException) return tr('超时');
     if (e is http.ClientException) return e.message;
     return '$e';
   }
@@ -89,21 +92,21 @@ class StashApi {
           category: 'Network',
           level: 'ERROR',
           title: '$kind $title',
-          message: '连接超时',
+          message: tr('连接超时'),
           method: 'POST',
           url: _endpoint.toString(),
           ms: sw.elapsedMilliseconds);
-      throw ApiException('连接超时');
+      throw ApiException(tr('连接超时'));
     } catch (e) {
       NetLog.instance.record(
           category: 'Network',
           level: 'ERROR',
           title: '$kind $title',
-          message: '网络错误: $e',
+          message: tr('网络错误: {error}', {'error': e}),
           method: 'POST',
           url: _endpoint.toString(),
           ms: sw.elapsedMilliseconds);
-      throw ApiException('网络错误: $e');
+      throw ApiException(tr('网络错误: {error}', {'error': e}));
     }
     if (resp.statusCode != 200) {
       // 尽力带出服务端返回的具体错误信息（GraphQL errors / message / body 片段）。
@@ -146,12 +149,12 @@ class StashApi {
           category: 'Network',
           level: 'ERROR',
           title: '$kind $title',
-          message: '响应解析失败',
+          message: tr('响应解析失败'),
           method: 'POST',
           url: _endpoint.toString(),
           status: resp.statusCode,
           ms: sw.elapsedMilliseconds);
-      throw ApiException('响应解析失败');
+      throw ApiException(tr('响应解析失败'));
     }
     final errors = decoded?['errors'];
     if (errors is List && errors.isNotEmpty) {
@@ -159,12 +162,12 @@ class StashApi {
           category: 'Network',
           level: 'ERROR',
           title: '$kind $title',
-          message: errors.first?['message']?.toString() ?? 'GraphQL 错误',
+          message: errors.first?['message']?.toString() ?? tr('GraphQL 错误'),
           method: 'POST',
           url: _endpoint.toString(),
           status: resp.statusCode,
           ms: sw.elapsedMilliseconds);
-      throw ApiException(errors.first?['message']?.toString() ?? 'GraphQL 错误');
+      throw ApiException(errors.first?['message']?.toString() ?? tr('GraphQL 错误'));
     }
     NetLog.instance.record(
         category: 'Network',
@@ -847,7 +850,7 @@ class StashApi {
     if (specs.isEmpty) return '';
     final fields = await mutationFields();
     if (!fields.contains('installPackages')) {
-      throw ApiException('当前 Stash 版本不支持安装削刮器包');
+      throw ApiException(tr('当前 Stash 版本不支持安装削刮器包'));
     }
     final inp = await inputFields('PackageSpecInput');
     final key = inp.contains('source_url')
@@ -878,7 +881,7 @@ class StashApi {
   Future<void> reloadScrapers() async {
     final fields = await mutationFields();
     if (!fields.contains('reloadScrapers')) {
-      throw ApiException('当前 Stash 版本不支持重新加载削刮器');
+      throw ApiException(tr('当前 Stash 版本不支持重新加载削刮器'));
     }
     await query('mutation { reloadScrapers }', null,
         const Duration(seconds: 30));
@@ -923,7 +926,7 @@ class StashApi {
   // ---------- 短片查询 ----------
 
   static const _sceneCardFields = '''
-      id title details date created_at rating100 o_counter organized
+      id title details date created_at rating100 o_counter play_count organized
       urls studio { id name } performers { id name } tags { id name }
       paths { screenshot webp } files { path height width duration }
       captions { language_code caption_type }
@@ -1093,6 +1096,8 @@ class StashApi {
         return s.rating100.toString();
       case 'o_counter':
         return s.oCounter.toString();
+      case 'play_count':
+        return s.playCount.toString();
       case 'duration':
         return s.duration.toString();
       case 'created_at':
@@ -1112,7 +1117,7 @@ class StashApi {
     const q = '''
       query FindScene(\$id: ID!) {
         findScene(id: \$id) {
-          id title details date rating100 o_counter organized
+          id title details date rating100 o_counter play_count organized
           urls studio { id name }
           performers { id name image_path birthdate details }
           tags { id name }
@@ -1289,6 +1294,55 @@ class StashApi {
     );
   }
 
+  // ---------- 集合（Groups） ----------
+
+  static const _groupFields = '''
+    id name date rating100 duration director synopsis aliases urls
+    front_image_path scene_count studio { id name } tags { id name }
+  ''';
+
+  /// 集合列表。排序白名单：name / date / rating / duration / scenes_count /
+  /// created_at / updated_at（Stash 0.31.1 拒绝 studio 等未支持字段）。
+  Future<FindResult<Group>> findGroups({
+    int page = 1,
+    int perPage = 60,
+    String? q,
+    String sort = 'name',
+    String direction = 'ASC',
+  }) async {
+    const gq = '''
+      query FindGroups(\$filter: FindFilterType!) {
+        findGroups(filter: \$filter) {
+          count
+          groups { $_groupFields }
+        }
+      }''';
+    final filter = <String, dynamic>{
+      'page': page,
+      'per_page': perPage,
+      'sort': sort,
+      'direction': direction,
+      if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+    };
+    final d = await query(gq, {'filter': filter});
+    final fg = d?['findGroups'];
+    if (fg == null) return const FindResult<Group>(count: 0, items: []);
+    return FindResult<Group>(
+      count: fg['count'] is int ? fg['count'] as int : 0,
+      items: Group.listFrom(fg['groups']),
+    );
+  }
+
+  Future<Group?> findGroup(String id) async {
+    const gq = '''
+      query FindGroup(\$id: ID!) {
+        findGroup(id: \$id) { $_groupFields }
+      }''';
+    final d = await query(gq, {'id': id});
+    final g = d?['findGroup'];
+    return g == null ? null : Group.fromJson(g);
+  }
+
   // ---------- 削刮 ----------
 
   static const _long = Duration(seconds: 180);
@@ -1418,7 +1472,28 @@ class StashApi {
     const m =
         'mutation UpdateScene(\$input: SceneUpdateInput!) { sceneUpdate(input: \$input) { id } }';
     final d = await query(m, {'input': input});
-    if (d?['sceneUpdate'] == null) throw ApiException('sceneUpdate 失败');
+    if (d?['sceneUpdate'] == null) throw ApiException(tr('sceneUpdate 失败'));
+  }
+
+  /// 标记短片已看一次（Stash 0.31 的 sceneAddPlay，省略 times 即按当前时间记一条）。
+  /// 返回服务端最新的已看次数。
+  Future<int> markScenePlayed(String id) async {
+    const m = 'mutation SceneAddPlay(\$id: ID!) '
+        '{ sceneAddPlay(id: \$id) { count } }';
+    final d = await query(m, {'id': id});
+    final v = d?['sceneAddPlay'];
+    if (v is Map && v['count'] is int) return v['count'] as int;
+    throw ApiException(tr('sceneAddPlay 失败'));
+  }
+
+  /// 清零短片的已看次数（Stash 0.31 的 sceneResetPlayCount）。
+  Future<void> resetScenePlayCount(String id) async {
+    const m = 'mutation SceneResetPlayCount(\$id: ID!) '
+        '{ sceneResetPlayCount(id: \$id) }';
+    final d = await query(m, {'id': id});
+    if (d == null || d['sceneResetPlayCount'] == null) {
+      throw ApiException(tr('sceneResetPlayCount 失败'));
+    }
   }
 
   /// 清除短片的全部削刮结果：标题改用文件名，简介/日期/链接/工作室/演员/标签清空。
@@ -1441,14 +1516,14 @@ class StashApi {
     const m =
         'mutation UpdatePerformer(\$input: PerformerUpdateInput!) { performerUpdate(input: \$input) { id } }';
     final d = await query(m, {'input': input});
-    if (d?['performerUpdate'] == null) throw ApiException('performerUpdate 失败');
+    if (d?['performerUpdate'] == null) throw ApiException(tr('performerUpdate 失败'));
   }
 
   Future<void> updateStudio(Map<String, dynamic> input) async {
     const m =
         'mutation UpdateStudio(\$input: StudioUpdateInput!) { studioUpdate(input: \$input) { id } }';
     final d = await query(m, {'input': input});
-    if (d?['studioUpdate'] == null) throw ApiException('studioUpdate 失败');
+    if (d?['studioUpdate'] == null) throw ApiException(tr('studioUpdate 失败'));
   }
 
   Future<String> createPerformer(Map<String, dynamic> input) async {
@@ -1456,7 +1531,7 @@ class StashApi {
         'mutation CreatePerformer(\$input: PerformerCreateInput!) { performerCreate(input: \$input) { id } }';
     final d = await query(m, {'input': input});
     final v = d?['performerCreate'];
-    if (v == null || v['id'] == null) throw ApiException('performerCreate 失败');
+    if (v == null || v['id'] == null) throw ApiException(tr('performerCreate 失败'));
     return v['id'].toString();
   }
 
@@ -1467,7 +1542,7 @@ class StashApi {
         'mutation CreateTag(\$input: TagCreateInput!) { $m(input: \$input) { id } }';
     final d = await query(q, {'input': {'name': name}});
     final v = d?[m];
-    if (v == null || v['id'] == null) throw ApiException('$m 失败');
+    if (v == null || v['id'] == null) throw ApiException(tr('{m} 失败', {'m': m}));
     return v['id'].toString();
   }
 
@@ -1480,7 +1555,7 @@ class StashApi {
       'input': {'name': name, ...?extra}
     });
     final v = d?[m];
-    if (v == null || v['id'] == null) throw ApiException('$m 失败');
+    if (v == null || v['id'] == null) throw ApiException(tr('{m} 失败', {'m': m}));
     return v['id'].toString();
   }
 
@@ -1533,7 +1608,7 @@ class StashApi {
         'o_history': true,
       }
     });
-    if (d?['sceneMerge'] == null) throw ApiException('sceneMerge 失败');
+    if (d?['sceneMerge'] == null) throw ApiException(tr('sceneMerge 失败'));
   }
 
   /// 演员合并：把 sourceIds 的演员并入 destinationId（源条目删除，
@@ -1545,7 +1620,7 @@ class StashApi {
     final d = await query(m, {
       'input': {'source': sourceIds, 'destination': destinationId}
     });
-    if (d?['performerMerge'] == null) throw ApiException('performerMerge 失败');
+    if (d?['performerMerge'] == null) throw ApiException(tr('performerMerge 失败'));
   }
 
   // ---------- 削刮结果写回 ----------
@@ -1569,19 +1644,19 @@ class StashApi {
 
   Future<String> _resolvePerformerId(ScrapedPerformer p) async {
     if (p.storedId.isNotEmpty) return p.storedId;
-    if (p.name.isEmpty) throw ApiException('削刮演员无名称');
+    if (p.name.isEmpty) throw ApiException(tr('削刮演员无名称'));
     return createPerformer({'name': p.name});
   }
 
   Future<String> _resolveTagId(ScrapedTag t) async {
     if (t.storedId.isNotEmpty) return t.storedId;
-    if (t.name.isEmpty) throw ApiException('削刮标签无名称');
+    if (t.name.isEmpty) throw ApiException(tr('削刮标签无名称'));
     return createTag(t.name);
   }
 
   Future<String> _resolveStudioId(ScrapedStudio s) async {
     if (s.storedId.isNotEmpty) return s.storedId;
-    if (s.name.isEmpty) throw ApiException('削刮工作室无名称');
+    if (s.name.isEmpty) throw ApiException(tr('削刮工作室无名称'));
     return createStudio(s.name);
   }
 

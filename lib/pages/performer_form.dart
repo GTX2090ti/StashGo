@@ -4,6 +4,7 @@ import '../api/stash_api.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
+import '../l10n/l10n.dart';
 
 /// 提交回调：由页面决定调用 create 还是 update，并在成功后返回。
 typedef PerformerSubmit = Future<void> Function(
@@ -151,7 +152,7 @@ class _PerformerFormState extends State<PerformerForm> {
       }
       _tags = await _api.allTags();
     } catch (e) {
-      _error = '加载失败：$e';
+      _error = tr('加载失败：{error}', {'error': e});
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -229,7 +230,7 @@ class _PerformerFormState extends State<PerformerForm> {
   Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = '演员名称不能为空');
+      setState(() => _error = tr('演员名称不能为空'));
       return;
     }
     setState(() {
@@ -239,7 +240,9 @@ class _PerformerFormState extends State<PerformerForm> {
     try {
       await widget.onSubmit(context, _changedInput());
     } catch (e) {
-      if (mounted) setState(() => _error = '保存失败：$e');
+      if (mounted) {
+        setState(() => _error = tr('保存失败：{error}', {'error': e}));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -260,7 +263,7 @@ class _PerformerFormState extends State<PerformerForm> {
                   : (v as List).isNotEmpty;
       if (filled) n++;
     }
-    return n == 0 ? '空' : '$n 项';
+    return n == 0 ? tr('空') : tr('{count} 项', {'count': n});
   }
 
   Widget _text(TextEditingController c, String label,
@@ -320,29 +323,29 @@ class _PerformerFormState extends State<PerformerForm> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               children: [
                 FoldSection(
-                  title: '基本信息',
+                  title: tr('基本信息'),
                   open: true,
                   children: [
-                    _text(_nameCtrl, _isNew ? '名称（必填）' : '名称'),
-                    _text(_disambigCtrl, '区别名',
-                        hint: '同名演员的补充说明'),
-                    _text(_aliasCtrl, '别名',
-                        hint: '每行一个', maxLines: 4),
-                    _picker('性别', _gender, kGenderOptions, '未设置',
+                    _text(_nameCtrl, _isNew ? tr('名称（必填）') : tr('名称')),
+                    _text(_disambigCtrl, tr('区别名'),
+                        hint: tr('同名演员的补充说明')),
+                    _text(_aliasCtrl, tr('别名'),
+                        hint: tr('每行一个'), maxLines: 4),
+                    _picker(tr('性别'), _gender, kGenderOptions, tr('未设置'),
                         (v) => setState(() => _gender = v ?? '')),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _favorite,
-                      title: const Text('收藏'),
+                      title:  Text(tr('收藏')),
                       onChanged: (v) => setState(() => _favorite = v),
                     ),
                     Row(children: [
-                      const Text('评分'),
+                       Text(tr('评分')),
                       const Spacer(),
                       Text(
                         _rating > 0
                             ? '${(_rating / 20).toStringAsFixed(1)} / 5.0'
-                            : '未评分',
+                            : tr('未评分'),
                         style: theme.textTheme.bodySmall,
                       ),
                     ]),
@@ -351,7 +354,7 @@ class _PerformerFormState extends State<PerformerForm> {
                       max: 100,
                       divisions: 20,
                       label: _rating == 0
-                          ? '未评分'
+                          ? tr('未评分')
                           : (_rating / 20).toStringAsFixed(1),
                       onChanged: (v) => setState(() => _rating = v.round()),
                     ),
@@ -359,19 +362,19 @@ class _PerformerFormState extends State<PerformerForm> {
                 ),
 
                 FoldSection(
-                  title: '出生与地区',
+                  title: tr('出生与地区'),
                   summary: _countSummary(
                       ['birthdate', 'death_date', 'country', 'ethnicity']),
                   children: [
-                    _text(_birthCtrl, '出生日期（yyyy-MM-dd）', date: true),
-                    _text(_deathCtrl, '去世日期（yyyy-MM-dd）', date: true),
-                    _text(_countryCtrl, '国籍'),
-                    _text(_ethnicityCtrl, '族裔'),
+                    _text(_birthCtrl, tr('出生日期（yyyy-MM-dd）'), date: true),
+                    _text(_deathCtrl, tr('去世日期（yyyy-MM-dd）'), date: true),
+                    _text(_countryCtrl, tr('国籍')),
+                    _text(_ethnicityCtrl, tr('族裔')),
                   ],
                 ),
 
                 FoldSection(
-                  title: '身体数据',
+                  title: tr('身体数据'),
                   summary: _countSummary([
                     'height_cm',
                     'weight',
@@ -383,36 +386,38 @@ class _PerformerFormState extends State<PerformerForm> {
                     'hair_color'
                   ]),
                   children: [
-                    _text(_heightCtrl, '身高',
+                    _text(_heightCtrl, tr('身高'),
                         unit: 'cm', type: TextInputType.number),
-                    _text(_weightCtrl, '体重',
+                    _text(_weightCtrl, tr('体重'),
                         unit: 'kg', type: TextInputType.number),
-                    _text(_measureCtrl, '三围', hint: '如 34B-24-35'),
-                    _text(_fakeTitsCtrl, '隆胸', hint: '如 natural / fake'),
-                    _text(_penisCtrl, '阴茎长度',
+                    _text(_measureCtrl, tr('三围'), hint: tr('如 34B-24-35')),
+                    _text(_fakeTitsCtrl, tr('隆胸'), hint: tr('如 natural / fake')),
+                    _text(_penisCtrl, tr('阴茎长度'),
                         unit: 'cm', type: const TextInputType.numberWithOptions(decimal: true)),
-                    _picker('环切状态', _circumcisedValue, kCircumcisedOptions,
-                        '未设置',
+                    _picker(tr('环切状态'), _circumcisedValue, kCircumcisedOptions,
+                        tr('未设置'),
                         (v) => setState(() => _circumcisedValue = v ?? '')),
-                    _text(_eyeCtrl, '瞳色'),
-                    _text(_hairCtrl, '发色'),
+                    _text(_eyeCtrl, tr('瞳色')),
+                    _text(_hairCtrl, tr('发色')),
                   ],
                 ),
 
                 FoldSection(
-                  title: '职业生涯',
+                  title: tr('职业生涯'),
                   summary: _countSummary(['career_start', 'career_end']),
                   children: [
-                    _text(_careerStartCtrl, '出道年份',
-                        hint: '如 2015', type: TextInputType.number),
-                    _text(_careerEndCtrl, '隐退年份',
-                        hint: '如 2020', type: TextInputType.number),
+                    _text(_careerStartCtrl, tr('出道年份'),
+                        hint: tr('如 2015'), type: TextInputType.number),
+                    _text(_careerEndCtrl, tr('隐退年份'),
+                        hint: tr('如 2020'), type: TextInputType.number),
                     if (_careerStartCtrl.text.isEmpty &&
                         _careerEndCtrl.text.isEmpty &&
                         (p?.careerLength.isNotEmpty ?? false))
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: Text('服务器仅有旧字段：${p!.careerLength}',
+                        child: Text(
+                            tr('服务器仅有旧字段：{value}',
+                                {'value': p!.careerLength}),
                             style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant)),
                       ),
@@ -420,46 +425,48 @@ class _PerformerFormState extends State<PerformerForm> {
                 ),
 
                 FoldSection(
-                  title: '纹身与穿孔',
+                  title: tr('纹身与穿孔'),
                   summary: _countSummary(['tattoos', 'piercings']),
                   children: [
-                    _text(_tattooCtrl, '纹身',
-                        hint: '每行一条，如：左臂 - 玫瑰', maxLines: 4),
-                    _text(_piercingCtrl, '穿孔',
-                        hint: '每行一条，如：耳 - 两个', maxLines: 4),
+                    _text(_tattooCtrl, tr('纹身'),
+                        hint: tr('每行一条，如：左臂 - 玫瑰'), maxLines: 4),
+                    _text(_piercingCtrl, tr('穿孔'),
+                        hint: tr('每行一条，如：耳 - 两个'), maxLines: 4),
                   ],
                 ),
 
                 FoldSection(
-                  title: '链接',
+                  title: tr('链接'),
                   summary: _countSummary(['urls']),
                   children: [
-                    _text(_urlCtrl, '网址',
-                        hint: '每行一个 URL', maxLines: 4),
+                    _text(_urlCtrl, tr('网址'),
+                        hint: tr('每行一个 URL'), maxLines: 4),
                   ],
                 ),
 
                 FoldSection(
-                  title: '标签',
-                  summary: _tagIds.isEmpty ? '空' : '${_tagIds.length} 个',
+                  title: tr('标签'),
+                  summary: _tagIds.isEmpty
+                      ? tr('空')
+                      : tr('{count} 个', {'count': _tagIds.length}),
                   open: _tagIds.isNotEmpty,
                   children: [
                     OutlinedButton.icon(
                       onPressed: () async {
                         final r = await showMultiSelectSheet(
                           context,
-                          title: '选择标签',
+                          title: tr('选择标签'),
                           options: [for (final t in _tags) (t.id, t.name)],
                           selected: _tagIds,
                         );
                         if (r != null) setState(() => _tagIds = r);
                       },
                       icon: const Icon(Icons.sell_outlined, size: 16),
-                      label: Text('选择标签（${_tagIds.length}）'),
+                      label: Text(tr('选择标签（{count}）', {'count': _tagIds.length})),
                     ),
                     if (_tagIds.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text('点击标签可移除',
+                      Text(tr('点击标签可移除'),
                           style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant)),
                       Wrap(
@@ -479,17 +486,17 @@ class _PerformerFormState extends State<PerformerForm> {
                 ),
 
                 FoldSection(
-                  title: '简介与其他',
+                  title: tr('简介与其他'),
                   summary: _countSummary(
                       ['details', 'ignore_auto_tag']),
                   children: [
-                    _text(_detailsCtrl, '简介',
-                        hint: '演员介绍…', maxLines: 6),
+                    _text(_detailsCtrl, tr('简介'),
+                        hint: tr('演员介绍…'), maxLines: 6),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _ignoreAutoTag,
-                      title: const Text('忽略自动打标'),
-                      subtitle: const Text('自动打标任务跳过该演员'),
+                      title:  Text(tr('忽略自动打标')),
+                      subtitle:  Text(tr('自动打标任务跳过该演员')),
                       onChanged: (v) => setState(() => _ignoreAutoTag = v),
                     ),
                   ],
@@ -497,18 +504,18 @@ class _PerformerFormState extends State<PerformerForm> {
 
                 if (!_isNew && p != null) ...[
                   FoldSection(
-                    title: '服务端统计',
-                    summary: '短片 ${p.sceneCount}',
+                    title: tr('服务端统计'),
+                    summary: tr('短片 {count}', {'count': p.sceneCount}),
                     children: [
-                      InfoRow('短片', '${p.sceneCount}'),
-                      InfoRow('图片', '${p.imageCount}'),
-                      InfoRow('相册', '${p.galleryCount}'),
-                      InfoRow('合集', '${p.groupCount}'),
-                      InfoRow('O 计数', '${p.oCounter}'),
+                      InfoRow(tr('短片'), '${p.sceneCount}'),
+                      InfoRow(tr('图片'), '${p.imageCount}'),
+                      InfoRow(tr('相册'), '${p.galleryCount}'),
+                      InfoRow(tr('合集'), '${p.groupCount}'),
+                      InfoRow(tr('O 计数'), '${p.oCounter}'),
                       if (p.createdAt.isNotEmpty)
-                        InfoRow('创建时间', _fmtTime(p.createdAt)),
+                        InfoRow(tr('创建时间'), _fmtTime(p.createdAt)),
                       if (p.updatedAt.isNotEmpty)
-                        InfoRow('更新时间', _fmtTime(p.updatedAt)),
+                        InfoRow(tr('更新时间'), _fmtTime(p.updatedAt)),
                     ],
                   ),
                 ],
@@ -528,7 +535,7 @@ class _PerformerFormState extends State<PerformerForm> {
             height: 46,
             child: FilledButton(
               onPressed: _saving ? null : _submit,
-              child: Text(_saving ? '保存中…' : widget.submitLabel),
+              child: Text(_saving ? tr('保存中…') : widget.submitLabel),
             ),
           ),
         ),

@@ -4,6 +4,7 @@ import '../api/stash_api.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
+import '../l10n/l10n.dart';
 
 /// 提交回调：由页面决定调用 create 还是 update，并在成功后返回。
 typedef StudioSubmit = Future<void> Function(
@@ -94,14 +95,14 @@ class _StudioFormState extends State<StudioForm> {
           _tagIds = s.tags.map((e) => e.id).toSet();
           _orig = _snapshot();
         } else {
-          _error = '加载失败';
+          _error = tr('加载失败');
         }
       }
       final results = await Future.wait([_api.allStudios(), _api.allTags()]);
       _studios = results[0] as List<Studio>;
       _tags = results[1] as List<Tag>;
     } catch (e) {
-      _error = '加载失败：$e';
+      _error = tr('加载失败：{error}', {'error': e});
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -169,7 +170,7 @@ class _StudioFormState extends State<StudioForm> {
   Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = '工作室名称不能为空');
+      setState(() => _error = tr('工作室名称不能为空'));
       return;
     }
     setState(() {
@@ -179,13 +180,15 @@ class _StudioFormState extends State<StudioForm> {
     try {
       final input = _changedInput();
       if (!_isNew && input.length <= 1) {
-        showToast(context, '未做修改');
+        showToast(context, tr('未做修改'));
         Navigator.pop(context, false);
         return;
       }
       await widget.onSubmit(context, input);
     } catch (e) {
-      if (mounted) setState(() => _error = '保存失败：$e');
+      if (mounted) {
+        setState(() => _error = tr('保存失败：{error}', {'error': e}));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -225,25 +228,25 @@ class _StudioFormState extends State<StudioForm> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               children: [
                 FoldSection(
-                  title: '基本信息',
+                  title: tr('基本信息'),
                   open: true,
                   children: [
-                    _text(_nameCtrl, _isNew ? '名称（必填）' : '名称'),
-                    _text(_aliasCtrl, '别名', hint: '每行一个', maxLines: 4),
+                    _text(_nameCtrl, _isNew ? tr('名称（必填）') : tr('名称')),
+                    _text(_aliasCtrl, tr('别名'), hint: tr('每行一个'), maxLines: 4),
                     _picker(parents),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _favorite,
-                      title: const Text('收藏'),
+                      title:  Text(tr('收藏')),
                       onChanged: (v) => setState(() => _favorite = v),
                     ),
                     Row(children: [
-                      const Text('评分'),
+                       Text(tr('评分')),
                       const Spacer(),
                       Text(
                         _rating > 0
                             ? '${(_rating / 20).toStringAsFixed(1)} / 5.0'
-                            : '未评分',
+                            : tr('未评分'),
                         style: theme.textTheme.bodySmall,
                       ),
                     ]),
@@ -252,7 +255,7 @@ class _StudioFormState extends State<StudioForm> {
                       max: 100,
                       divisions: 20,
                       label: _rating == 0
-                          ? '未评分'
+                          ? tr('未评分')
                           : (_rating / 20).toStringAsFixed(1),
                       onChanged: (v) => setState(() => _rating = v.round()),
                     ),
@@ -260,36 +263,38 @@ class _StudioFormState extends State<StudioForm> {
                 ),
 
                 FoldSection(
-                  title: '链接',
+                  title: tr('链接'),
                   summary: _lines(_urlCtrl.text).isEmpty
-                      ? '空'
-                      : '${_lines(_urlCtrl.text).length} 个',
+                      ? tr('空')
+                      : tr('{count} 个', {'count': _lines(_urlCtrl.text).length}),
                   children: [
-                    _text(_urlCtrl, '网址', hint: '每行一个 URL', maxLines: 4),
+                    _text(_urlCtrl, tr('网址'), hint: tr('每行一个 URL'), maxLines: 4),
                   ],
                 ),
 
                 FoldSection(
-                  title: '标签',
-                  summary: _tagIds.isEmpty ? '空' : '${_tagIds.length} 个',
+                  title: tr('标签'),
+                  summary: _tagIds.isEmpty
+                      ? tr('空')
+                      : tr('{count} 个', {'count': _tagIds.length}),
                   open: _tagIds.isNotEmpty,
                   children: [
                     OutlinedButton.icon(
                       onPressed: () async {
                         final r = await showMultiSelectSheet(
                           context,
-                          title: '选择标签',
+                          title: tr('选择标签'),
                           options: [for (final t in _tags) (t.id, t.name)],
                           selected: _tagIds,
                         );
                         if (r != null) setState(() => _tagIds = r);
                       },
                       icon: const Icon(Icons.sell_outlined, size: 16),
-                      label: Text('选择标签（${_tagIds.length}）'),
+                      label: Text(tr('选择标签（{count}）', {'count': _tagIds.length})),
                     ),
                     if (_tagIds.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text('点击标签可移除',
+                      Text(tr('点击标签可移除'),
                           style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant)),
                       Wrap(
@@ -309,15 +314,15 @@ class _StudioFormState extends State<StudioForm> {
                 ),
 
                 FoldSection(
-                  title: '简介与其他',
-                  summary: _detailsCtrl.text.trim().isEmpty ? '空' : '已填写',
+                  title: tr('简介与其他'),
+                  summary: _detailsCtrl.text.trim().isEmpty ? tr('空') : tr('已填写'),
                   children: [
-                    _text(_detailsCtrl, '简介', hint: '工作室介绍…', maxLines: 6),
+                    _text(_detailsCtrl, tr('简介'), hint: tr('工作室介绍…'), maxLines: 6),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _ignoreAutoTag,
-                      title: const Text('忽略自动打标'),
-                      subtitle: const Text('自动打标任务跳过该工作室'),
+                      title:  Text(tr('忽略自动打标')),
+                      subtitle:  Text(tr('自动打标任务跳过该工作室')),
                       onChanged: (v) => setState(() => _ignoreAutoTag = v),
                     ),
                   ],
@@ -325,17 +330,17 @@ class _StudioFormState extends State<StudioForm> {
 
                 if (s != null)
                   FoldSection(
-                    title: '服务端统计',
-                    summary: '短片 ${s.sceneCount}',
+                    title: tr('服务端统计'),
+                    summary: tr('短片 {count}', {'count': s.sceneCount}),
                     children: [
-                      InfoRow('短片', '${s.sceneCount}'),
-                      InfoRow('图片', '${s.imageCount}'),
-                      InfoRow('演员', '${s.performerCount}'),
-                      InfoRow('子工作室', '${s.childStudios.length}'),
+                      InfoRow(tr('短片'), '${s.sceneCount}'),
+                      InfoRow(tr('图片'), '${s.imageCount}'),
+                      InfoRow(tr('演员'), '${s.performerCount}'),
+                      InfoRow(tr('子工作室'), '${s.childStudios.length}'),
                       if (s.createdAt.isNotEmpty)
-                        InfoRow('创建时间', _fmtTime(s.createdAt)),
+                        InfoRow(tr('创建时间'), _fmtTime(s.createdAt)),
                       if (s.updatedAt.isNotEmpty)
-                        InfoRow('更新时间', _fmtTime(s.updatedAt)),
+                        InfoRow(tr('更新时间'), _fmtTime(s.updatedAt)),
                     ],
                   ),
 
@@ -354,7 +359,7 @@ class _StudioFormState extends State<StudioForm> {
             height: 46,
             child: FilledButton(
               onPressed: _saving ? null : _submit,
-              child: Text(_saving ? '保存中…' : widget.submitLabel),
+              child: Text(_saving ? tr('保存中…') : widget.submitLabel),
             ),
           ),
         ),
@@ -370,12 +375,12 @@ class _StudioFormState extends State<StudioForm> {
       padding: const EdgeInsets.only(bottom: 12),
       child: DropdownButtonHideUnderline(
         child: InputDecorator(
-          decoration: const InputDecoration(labelText: '上级工作室'),
+          decoration:  InputDecoration(labelText: tr('上级工作室')),
           child: DropdownButton<String>(
             value: _parentId.isEmpty ? '' : _parentId,
             isExpanded: true,
             items: [
-              const DropdownMenuItem(value: '', child: Text('无')),
+               DropdownMenuItem(value: '', child: Text(tr('无'))),
               if (orphan)
                 DropdownMenuItem(
                   value: _parentId,

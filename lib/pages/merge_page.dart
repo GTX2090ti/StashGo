@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
+import '../l10n/l10n.dart';
 
 /// 合并短片页：搜索源短片（可多选）→ 合并到目标短片（sceneMerge）。
 class MergePage extends StatefulWidget {
@@ -52,7 +53,7 @@ class _MergePageState extends State<MergePage> {
       setState(() => _scenes = r.items);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = '搜索失败：$e');
+      setState(() => _error = tr('搜索失败：{error}', {'error': e}));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -70,7 +71,7 @@ class _MergePageState extends State<MergePage> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = '合并失败：$e');
+      setState(() => _error = tr('合并失败：{error}', {'error': e}));
     } finally {
       if (mounted) setState(() => _merging = false);
     }
@@ -80,7 +81,7 @@ class _MergePageState extends State<MergePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('合并短片')),
+      appBar: AppBar(title:  Text(tr('合并短片'))),
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -91,14 +92,14 @@ class _MergePageState extends State<MergePage> {
             onChanged: (_) => setState(() {}),
             onSubmitted: (_) => _search(),
             decoration: InputDecoration(
-              hintText: '搜索短片标题',
+              hintText: tr('搜索短片标题'),
               isDense: true,
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (_ctrl.text.isNotEmpty)
                     IconButton(
-                      tooltip: '清空',
+                      tooltip: tr('清空'),
                       icon: const Icon(Icons.clear, size: 16),
                       onPressed: () {
                         _ctrl.clear();
@@ -120,7 +121,7 @@ class _MergePageState extends State<MergePage> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('已选 ${_selected.length} 个源短片',
+              child: Text(tr('已选 {count} 个源短片', {'count': _selected.length}),
                   style: theme.textTheme.bodySmall),
             ),
           ),
@@ -129,7 +130,7 @@ class _MergePageState extends State<MergePage> {
               ? StatusView(loading: true, empty: '', onRetry: _search)
               : _scenes.isEmpty
                   ? StatusView(
-                      loading: false, empty: '没有匹配的短片', onRetry: _search)
+                      loading: false, empty: tr('没有匹配的短片'), onRetry: _search)
                   : ListView.builder(
                       itemCount: _scenes.length,
                       itemBuilder: (_, i) {
@@ -168,8 +169,11 @@ class _MergePageState extends State<MergePage> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Column(children: [
             Text(
-              '选择要并入「${widget.targetTitle.isEmpty ? "当前短片" : widget.targetTitle}」的短片（可多选）。'
-              '合并后演员/标签/文件取并集，源短片条目删除（视频文件挂到本片），播放与 O 记录一并合并。',
+              tr('选择要并入「{name}」的短片（可多选）。',
+                      {'name': widget.targetTitle.isEmpty
+                          ? tr('当前短片')
+                          : widget.targetTitle}) +
+                  tr('合并后演员/标签/文件取并集，源短片条目删除（视频文件挂到本片），播放与 O 记录一并合并。'),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -177,8 +181,8 @@ class _MergePageState extends State<MergePage> {
             FilledButton(
               onPressed: _merging || _selected.isEmpty ? null : _merge,
               child: Text(_merging
-                  ? '合并中…'
-                  : '合并（${_selected.length}）'),
+                  ? tr('合并中…')
+                  : tr('合并（{count}）', {'count': _selected.length})),
             ),
           ]),
         ),

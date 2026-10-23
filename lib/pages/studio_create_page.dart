@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/common.dart';
 import 'studio_form.dart';
+import '../l10n/l10n.dart';
 
 /// 手动添加工作室页；成功后 pop 新工作室 id，供来源页刷新。
 class StudioCreatePage extends StatelessWidget {
@@ -9,8 +10,8 @@ class StudioCreatePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => StudioForm(
-        title: '添加工作室',
-        submitLabel: '创建',
+        title: tr('添加工作室'),
+        submitLabel: tr('创建'),
         onSubmit: (ctx, input) async {
           final id = await buildApi().createStudio(
                 (input['name'] ?? '').toString(),

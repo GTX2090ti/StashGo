@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../api/net_log.dart';
 import '../widgets/common.dart';
+import '../l10n/l10n.dart';
 
 /// 网络日志查看页（对齐 iOS NetLogView）：每次请求结果 + 一键复制。
 class NetLogPage extends StatefulWidget {
@@ -34,7 +35,7 @@ class _NetLogPageState extends State<NetLogPage> {
     if (text.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    showToast(context, '日志已复制');
+    showToast(context, tr('日志已复制'));
   }
 
   @override
@@ -43,20 +44,20 @@ class _NetLogPageState extends State<NetLogPage> {
     final entries = NetLog.instance.entries;
     return Scaffold(
       appBar: AppBar(
-        title: Text('网络日志（${entries.length}）'),
+        title: Text(tr('网络日志（{count}）', {'count': entries.length})),
         actions: [
           IconButton(
-              tooltip: '复制全部',
+              tooltip: tr('复制全部'),
               icon: const Icon(Icons.copy),
               onPressed: _copyAll),
           IconButton(
-              tooltip: '清空',
+              tooltip: tr('清空'),
               icon: const Icon(Icons.delete_outline),
               onPressed: () => NetLog.instance.clear()),
         ],
       ),
       body: entries.isEmpty
-          ? const Center(child: Text('暂无网络日志'))
+          ?  Center(child: Text(tr('暂无网络日志')))
           : ListView.builder(
               padding: const EdgeInsets.all(8),
               itemCount: entries.length,

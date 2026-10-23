@@ -9,6 +9,7 @@ import 'performer_detail_page.dart';
 import 'scrape_page.dart';
 import 'scene_edit_page.dart';
 import 'studio_detail_page.dart';
+import '../l10n/l10n.dart';
 
 
 /// 短片详情页：工作室 / 演员 / 标签可点击进入对应详情。
@@ -27,6 +28,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
   bool _loading = true;
   String _error = '';
   bool _favBusy = false;
+  bool _playBusy = false;
   bool _genBusy = false;
   bool _clearBusy = false;
   String _primaryFileId = '';
@@ -70,10 +72,10 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
       await _api.updateScene({'id': s.id, 'primary_file_id': fileId});
       if (!mounted) return;
       setState(() => _primaryFileId = fileId);
-      showToast(context, '已设为默认文件');
+      showToast(context, tr('已设为默认文件'));
     } catch (e) {
       if (!mounted) return;
-      showToast(context, '设置失败：$e');
+      showToast(context, tr('设置失败：{error}', {'error': e}));
     } finally {
       if (mounted) setState(() => _primaryBusy = false);
     }
@@ -86,12 +88,12 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
       await _api.generateCovers([widget.sceneId]);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已提交生成封面任务，可到「Stash 任务」查看进度')),
+         SnackBar(content: Text(tr('已提交生成封面任务，可到「Stash 任务」查看进度'))),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('生成封面失败：$e')));
+          .showSnackBar(SnackBar(content: Text(tr('生成封面失败：{error}', {'error': e}))));
     } finally {
       if (mounted) setState(() => _genBusy = false);
     }
@@ -103,25 +105,25 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
     if (s == null || _clearBusy) return;
     final name = s.fileBaseName;
     if (name.isEmpty) {
-      showToast(context, '该短片没有可取名的文件');
+      showToast(context, tr('该短片没有可取名的文件'));
       return;
     }
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('清除全部削刮'),
-        content: Text('将清空该短片的简介、日期、链接、工作室、演员与标签，'
-            '并把标题改为文件名「$name」。\n'
-            '评分、已看次数与封面不受影响。此操作无法撤销。'),
+        title:  Text(tr('清除全部削刮')),
+        content: Text(tr(
+            '将清空该短片的简介、日期、链接、工作室、演员与标签，并把标题改为文件名「{name}」。\n评分、已看次数与封面不受影响。此操作无法撤销。',
+            {'name': name})),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+              child:  Text(tr('取消'))),
           FilledButton(
               style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFE5533D)),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('清除')),
+              child:  Text(tr('清除'))),
         ],
       ),
     );
@@ -131,9 +133,11 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
       await _api.clearSceneScrape(s.id, name);
       await _load();
       widget.onChanged?.call();
-      if (mounted) showToast(context, '已清除削刮，标题改为「$name」');
+      if (mounted) {
+        showToast(context, tr('已清除削刮，标题改为「{name}」', {'name': name}));
+      }
     } catch (e) {
-      if (mounted) showToast(context, '清除失败：$e');
+      if (mounted) showToast(context, tr('清除失败：{error}', {'error': e}));
     } finally {
       if (mounted) setState(() => _clearBusy = false);
     }
@@ -156,7 +160,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
         _loading = false;
       });
       if (s == null) {
-        if (mounted) setState(() => _error = '加载失败');
+        if (mounted) setState(() => _error = tr('加载失败'));
       } else {
         _probeCoverRatio(s.coverPath);
       }
@@ -183,6 +187,61 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
       // 忽略失败
     }
     if (mounted) setState(() => _favBusy = false);
+  }
+
+  /// 标记已看一次（Stash 的播放次数，不是 O 计数）。
+  Future<void> _markPlayed() async {
+    final s = _scene;
+    if (s == null || _playBusy) return;
+    setState(() => _playBusy = true);
+    try {
+      final count = await _api.markScenePlayed(s.id);
+      if (!mounted) return;
+      setState(() => _scene = s.copyWith(playCount: count));
+      showToast(context, tr('已标记已看（{count} 次）', {'count': count}));
+      widget.onChanged?.call();
+    } catch (e) {
+      if (!mounted) return;
+      showToast(context, tr('标记已看失败：{error}', {'error': e}),
+          error: true);
+    } finally {
+      if (mounted) setState(() => _playBusy = false);
+    }
+  }
+
+  /// 清零已看次数（需二次确认）。
+  Future<void> _confirmResetPlayed() async {
+    final s = _scene;
+    if (s == null || _playBusy) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr('重置已看')),
+        content: Text(tr('将「{title}」的已看次数清零？', {'title': s.displayTitle})),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(tr('取消'))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(tr('重置'))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _playBusy = true);
+    try {
+      await _api.resetScenePlayCount(s.id);
+      if (!mounted) return;
+      setState(() => _scene = s.copyWith(playCount: 0));
+      showToast(context, tr('已重置已看'));
+      widget.onChanged?.call();
+    } catch (e) {
+      if (!mounted) return;
+      showToast(context, tr('重置失败：{error}', {'error': e}), error: true);
+    } finally {
+      if (mounted) setState(() => _playBusy = false);
+    }
   }
 
   Future<void> _openEdit() async {
@@ -236,7 +295,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
 
   void _toastCopy(String path) {
     Clipboard.setData(ClipboardData(text: path));
-    showToast(context, '路径已复制');
+    showToast(context, tr('路径已复制'));
   }
 
   /// 文件大小格式化。
@@ -282,24 +341,30 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
     final s = _scene;
     return Scaffold(
       appBar: AppBar(
-        title: Text(s != null && s.title.isNotEmpty ? s.title : '短片详情',
+        title: Text(s != null && s.title.isNotEmpty ? s.title : tr('短片详情'),
             overflow: TextOverflow.ellipsis),
         actions: [
           if (s != null)
             IconButton(
-              tooltip: '生成封面',
+              tooltip: tr('生成封面'),
               onPressed: _genBusy ? null : () => _generateCover(),
               icon: const Icon(Icons.image_outlined),
             ),
           if (s != null)
             IconButton(
-              tooltip: '清除全部削刮',
+              tooltip: tr('清除全部削刮'),
               onPressed: _clearBusy ? null : _clearScrape,
               icon: const Icon(Icons.cleaning_services_outlined),
             ),
           if (s != null)
             IconButton(
-              tooltip: s.organized ? '取消收藏' : '收藏',
+              tooltip: tr('标记已看'),
+              onPressed: _playBusy ? null : _markPlayed,
+              icon: const Icon(Icons.visibility_outlined),
+            ),
+          if (s != null)
+            IconButton(
+              tooltip: s.organized ? tr('取消收藏') : tr('收藏'),
               onPressed: _favBusy ? null : _toggleFavorite,
               icon: Icon(s.organized ? Icons.star : Icons.star_border,
                   color: s.organized ? const Color(0xFFFF9F0A) : null),
@@ -311,7 +376,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
           : s == null
               ? StatusView(
                   loading: false,
-                  empty: _error.isNotEmpty ? _error : '加载失败',
+                  empty: _error.isNotEmpty ? _error : tr('加载失败'),
                   error: _error,
                   onRetry: _load)
               : LayoutBuilder(builder: (context, c) {
@@ -355,7 +420,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                   );
                   final info = <Widget>[
                     Text(
-                      s.title.isNotEmpty ? s.title : '（无标题）',
+                      s.title.isNotEmpty ? s.title : tr('（无标题）'),
                       style: theme.textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
@@ -364,27 +429,43 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                       Expanded(
                           child: OutlinedButton(
                               onPressed: _openEdit,
-                              child: const Text('编辑'))),
+                              child:  Text(tr('编辑')))),
                       const SizedBox(width: 10),
                       Expanded(
                           child: OutlinedButton(
                               onPressed: _openScrape,
-                              child: const Text('削刮'))),
+                              child:  Text(tr('削刮')))),
                       const SizedBox(width: 10),
                       Expanded(
                           child: OutlinedButton(
                               onPressed: _openMerge,
-                              child: const Text('合并'))),
+                              child:  Text(tr('合并')))),
                     ]),
 
-                    const SectionTitle('基本信息'),
-                    if (s.date.isNotEmpty) InfoRow('日期', s.date),
+                     SectionTitle(tr('基本信息')),
+                    if (s.date.isNotEmpty) InfoRow(tr('日期'), s.date),
                     if (s.rating100 > 0)
-                      InfoRow('评分', '${(s.rating100 / 20).toStringAsFixed(1)} / 5.0'),
-                    InfoRow('O 计数', '${s.oCounter}'),
+                      InfoRow(tr('评分'), '${(s.rating100 / 20).toStringAsFixed(1)} / 5.0'),
+                    InfoRow(tr('O 计数'), '${s.oCounter}'),
+                    InfoRow(tr('已看次数'), '${s.playCount}'),
+                    if (s.playCount > 0)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: _playBusy ? null : _confirmResetPlayed,
+                          icon: const Icon(Icons.restart_alt, size: 16),
+                          label: Text(tr('重置已看')),
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(0, 26),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ),
 
                     if (s.studio != null) ...[
-                      const SectionTitle('工作室'),
+                       SectionTitle(tr('工作室')),
                       InkWell(
                         onTap: () => Navigator.push(
                           context,
@@ -404,7 +485,8 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                     ],
 
                     if (s.performers.isNotEmpty) ...[
-                      SectionTitle('演员（${s.performers.length}）'),
+                      SectionTitle(
+                          tr('演员（{count}）', {'count': s.performers.length})),
                       Wrap(
                         children: [
                           for (final p in s.performers)
@@ -436,7 +518,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                     ],
 
                     if (s.files.isNotEmpty) ...[
-                      const SectionTitle('文件'),
+                       SectionTitle(tr('文件')),
                       for (final f in s.files) ...[
                         InkWell(
                           onTap: () => _toastCopy(f.path),
@@ -454,11 +536,15 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                                 // 大小 / 时长 / 修改时间
                                 Text(
                                   [
-                                    if (f.size > 0) '大小 ${_fmtSize(f.size)}',
+                                    if (f.size > 0)
+                                      tr('大小 {size}',
+                                          {'size': _fmtSize(f.size)}),
                                     if (f.duration > 0)
-                                      '时长 ${_fmtDur(f.duration)}',
+                                      tr('时长 {duration}',
+                                          {'duration': _fmtDur(f.duration)}),
                                     if (f.modTime.isNotEmpty)
-                                      '修改 ${_fmtTime(f.modTime)}',
+                                      tr('修改 {time}',
+                                          {'time': _fmtTime(f.modTime)}),
                                   ].join(' · '),
                                   style: theme.textTheme.bodySmall?.copyWith(
                                       fontSize: 10,
@@ -472,7 +558,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                                     padding:
                                         const EdgeInsets.symmetric(vertical: 2),
                                     child: Text(
-                                      '★ 默认文件',
+                                      tr('★ 默认文件'),
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                               fontSize: 11,
@@ -492,7 +578,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                                             horizontal: 4)),
                                     icon: const Icon(Icons.star_border,
                                         size: 13),
-                                    label: const Text('设为默认',
+                                    label:  Text(tr('设为默认'),
                                         style: TextStyle(fontSize: 11)),
                                   ),
                               ],
@@ -510,7 +596,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                     ],
 
                     if (s.tags.isNotEmpty) ...[
-                      SectionTitle('标签（${s.tags.length}）'),
+                      SectionTitle(tr('标签（{count}）', {'count': s.tags.length})),
                       Wrap(
                         children: [
                           for (final t in s.tags)
@@ -527,7 +613,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                     ],
 
                     if (s.details.isNotEmpty) ...[
-                      const SectionTitle('简介'),
+                       SectionTitle(tr('简介')),
                       Text(s.details,
                           style: theme.textTheme.bodyMedium
                               ?.copyWith(height: 1.6)),

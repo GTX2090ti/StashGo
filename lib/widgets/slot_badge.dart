@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../settings/app_settings.dart';
+import '../l10n/l10n.dart';
 
 /// 服务器槽位/延迟状态条：显示「档案名 · 内网/外网 · 延迟」，
 /// 点击弹出完整服务器菜单（档案切换 + 内网/外网槽位 + 手动锁定 + 重新测速）。
@@ -16,7 +17,7 @@ class SlotBadge extends StatelessWidget {
       await cfg.restoreAuto();
     } else if (v == 'probe') {
       await cfg.probeBoth();
-      await cfg.autoSelect('菜单重新测速');
+      await cfg.autoSelect(tr('菜单重新测速'));
     } else if (v == 'lan' || v == 'wan') {
       await cfg.setSlot(v == 'lan' ? AddrSlot.lan : AddrSlot.wan, true);
     } else if (v == 'lock') {
@@ -37,12 +38,12 @@ class SlotBadge extends StatelessWidget {
             cfg.lastLatencyMs >= 0 ? ' · ${cfg.lastLatencyMs}ms' : '';
         return PopupMenuButton<String>(
           padding: EdgeInsets.zero,
-          tooltip: '服务器',
+          tooltip: tr('服务器'),
           onSelected: _handle,
           itemBuilder: (_) {
             String lat(int v) {
               if (v >= 0) return ' · ${v}ms';
-              if (v == -2) return ' · 不可达';
+              if (v == -2) return tr(' · 不可达');
               return '';
             }
 
@@ -60,9 +61,9 @@ class SlotBadge extends StatelessWidget {
             // 内网/外网槽位
             for (final slot in AddrSlot.values) {
               final url = cfg.slotUrl(slot);
-              var label = '${slot.label}地址';
+              var label = tr('{slot}地址', {'slot': tr(slot.label)});
               if (url.isEmpty) {
-                label += '（未配置）';
+                label += tr('（未配置）');
               } else {
                 if (cfg.activeSlot == slot) label = '✓ $label';
                 label += lat(slot == AddrSlot.lan
@@ -75,10 +76,10 @@ class SlotBadge extends StatelessWidget {
             items.add(CheckedPopupMenuItem(
               value: cfg.manualLock ? 'unlock' : 'lock',
               checked: cfg.manualLock,
-              child: const Text('手动锁定当前地址'),
+              child:  Text(tr('手动锁定当前地址')),
             ));
-            items.add(const PopupMenuItem(
-                value: 'probe', child: Text('重新测速')));
+            items.add( PopupMenuItem(
+                value: 'probe', child: Text(tr('重新测速'))));
             return items;
           },
           child: Container(
@@ -104,8 +105,8 @@ class SlotBadge extends StatelessWidget {
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
-                      '$name · ${cfg.activeSlot.label}'
-                      '${cfg.manualLock ? "（锁定）" : ""}$latency',
+                      '$name · ${tr(cfg.activeSlot.label)}'
+                      '${cfg.manualLock ? tr("（锁定）") : ""}$latency',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

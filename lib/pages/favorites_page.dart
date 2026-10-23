@@ -6,6 +6,7 @@ import 'adaptive_grid.dart';
 import 'performer_detail_page.dart';
 import 'scene_list_page.dart';
 import 'studio_detail_page.dart';
+import '../l10n/l10n.dart';
 
 /// 收藏页：短片（已整理）/ 演员 / 工作室 三个子页。
 /// 短片 = organized 收藏；演员 = favorite（0.31.1 无收藏筛选，客户端过滤）；
@@ -46,10 +47,10 @@ class _FavoritesPageState extends State<FavoritesPage>
         unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
         indicatorColor: theme.colorScheme.primary,
         labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-        tabs: const [
-          Tab(text: '短片'),
-          Tab(text: '演员'),
-          Tab(text: '工作室'),
+        tabs:  [
+          Tab(text: tr('短片')),
+          Tab(text: tr('演员')),
+          Tab(text: tr('工作室')),
         ],
       ),
       Expanded(
@@ -65,7 +66,7 @@ class _FavoritesPageState extends State<FavoritesPage>
     ]);
 
     if (widget.embedded) return Scaffold(body: body);
-    return Scaffold(appBar: AppBar(title: const Text('收藏')), body: body);
+    return Scaffold(appBar: AppBar(title:  Text(tr('收藏'))), body: body);
   }
 }
 
@@ -129,10 +130,10 @@ class _FavPerformersState extends State<_FavPerformers> {
       setState(() {
         _items = _items.where((e) => e.id != p.id).toList();
       });
-      showToast(context, p.favorite ? '已取消收藏' : '已收藏', error: false);
+      showToast(context, p.favorite ? tr('已取消收藏') : tr('已收藏'), error: false);
     } catch (e) {
       if (!mounted) return;
-      showToast(context, '操作失败：$e', error: true);
+      showToast(context, tr('操作失败：{error}', {'error': e}), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -149,7 +150,7 @@ class _FavPerformersState extends State<_FavPerformers> {
           loading: false, empty: _error, error: _error, onRetry: _load);
     }
     if (_items.isEmpty) {
-      return StatusView(loading: false, empty: '没有收藏的演员', onRetry: _load);
+      return StatusView(loading: false, empty: tr('没有收藏的演员'), onRetry: _load);
     }
     return RefreshIndicator(
       onRefresh: _load,
@@ -198,7 +199,7 @@ class _FavPerformersState extends State<_FavPerformers> {
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   iconSize: 16,
-                  tooltip: '取消收藏',
+                  tooltip: tr('取消收藏'),
                   icon: Icon(Icons.star,
                       color: theme.colorScheme.primary, size: 16),
                   onPressed: () => _toggleFav(p),
@@ -308,10 +309,10 @@ class _FavStudiosState extends State<_FavStudios> {
       setState(() {
         _items = _items.where((e) => e.id != s.id).toList();
       });
-      showToast(context, s.favorite ? '已取消收藏' : '已收藏');
+      showToast(context, s.favorite ? tr('已取消收藏') : tr('已收藏'));
     } catch (e) {
       if (!mounted) return;
-      showToast(context, '操作失败：$e', error: true);
+      showToast(context, tr('操作失败：{error}', {'error': e}), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -328,7 +329,7 @@ class _FavStudiosState extends State<_FavStudios> {
           loading: false, empty: _error, error: _error, onRetry: _reload);
     }
     if (_items.isEmpty && !_loading) {
-      return StatusView(loading: false, empty: '没有收藏的工作室', onRetry: _reload);
+      return StatusView(loading: false, empty: tr('没有收藏的工作室'), onRetry: _reload);
     }
     return RefreshIndicator(
       onRefresh: _reload,
@@ -387,7 +388,7 @@ class _FavStudiosState extends State<_FavStudios> {
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   iconSize: 16,
-                  tooltip: '取消收藏',
+                  tooltip: tr('取消收藏'),
                   icon: Icon(Icons.star,
                       color: theme.colorScheme.primary, size: 16),
                   onPressed: () => _toggleFav(s),

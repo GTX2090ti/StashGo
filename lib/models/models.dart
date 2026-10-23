@@ -2,6 +2,8 @@
 /// Dart 用 Map + dynamic 直接点访问，无 ArkTS JSON.parse 动态字典坑。
 library;
 
+import '../l10n/l10n.dart';
+
 String _s(dynamic v) => v == null ? '' : v.toString();
 int _i(dynamic v) => v is int ? v : (v is num ? v.toInt() : 0);
 List<String> _sl(dynamic v) {
@@ -42,7 +44,7 @@ String _ageText(String birthRaw, String refRaw) {
       (r.$2! < b.$2! || (r.$2! == b.$2! && r.$3! < b.$3!))) {
     age--;
   }
-  return age < 0 ? '' : '$age 岁';
+  return age < 0 ? '' : tr('{age} 岁', {'age': age});
 }
 
 class Tag {
@@ -126,20 +128,74 @@ class Studio {
       _ml(v).map(Studio.fromJson).toList();
 }
 
-/// 性别枚举（Stash GenderEnum）中文标签，顺序即选择器顺序。
-const kGenderOptions = <(String, String)>[
-  ('FEMALE', '女性'),
-  ('MALE', '男性'),
-  ('TRANSGENDER_MALE', '跨性别男性'),
-  ('TRANSGENDER_FEMALE', '跨性别女性'),
-  ('INTERSEX', '双性人'),
-  ('NON_BINARY', '非二元'),
+/// 集合（Stash 0.28+ 的 Group，取代旧的 Movie）。
+/// 短片与集合的关系记在短片一侧（SceneUpdateInput.groups），集合本身不持有 scene_ids。
+class Group {
+  final String id;
+  final String name;
+  final String date;
+  final int rating100;
+  final int duration;
+  final String director;
+  final String synopsis;
+  final String aliases;
+  final List<String> urls;
+  final String frontImagePath;
+  final Studio? studio;
+  final List<Tag> tags;
+  final int sceneCount;
+
+  const Group({
+    required this.id,
+    required this.name,
+    this.date = '',
+    this.rating100 = 0,
+    this.duration = 0,
+    this.director = '',
+    this.synopsis = '',
+    this.aliases = '',
+    this.urls = const [],
+    this.frontImagePath = '',
+    this.studio,
+    this.tags = const [],
+    this.sceneCount = 0,
+  });
+
+  factory Group.fromJson(dynamic j) => Group(
+        id: _s(j?['id']),
+        name: _s(j?['name']),
+        date: _s(j?['date']),
+        rating100: _i(j?['rating100']),
+        duration: _i(j?['duration']),
+        director: _s(j?['director']),
+        synopsis: _s(j?['synopsis']),
+        aliases: _s(j?['aliases']),
+        urls: _sl(j?['urls']),
+        frontImagePath: _s(j?['front_image_path']),
+        studio: j?['studio'] == null ? null : Studio.fromJson(j['studio']),
+        tags: Tag.listFrom(j?['tags']),
+        sceneCount: _i(j?['scene_count']),
+      );
+
+  static List<Group> listFrom(dynamic v) =>
+      _ml(v).map(Group.fromJson).toList();
+}
+
+/// 性别枚举（Stash GenderEnum）标签，顺序即选择器顺序。
+/// 用 getter 而非 final 常量，保证切换语言后重新取译文。
+List<(String, String)> get kGenderOptions => <(String, String)>[
+  ('FEMALE', tr('女性')),
+  ('MALE', tr('男性')),
+  ('TRANSGENDER_MALE', tr('跨性别男性')),
+  ('TRANSGENDER_FEMALE', tr('跨性别女性')),
+  ('INTERSEX', tr('双性人')),
+  ('NON_BINARY', tr('非二元')),
 ];
 
 /// 环切状态（Stash CircumcisedEnum）。
-const kCircumcisedOptions = <(String, String)>[
-  ('CUT', '已环切'),
-  ('UNCUT', '未环切'),
+List<(String, String)> get kCircumcisedOptions => <(String, String)>[
+  ('CUT', tr('已环切')),
+  ('UNCUT', tr('未环切')),
 ];
 
 String enumLabel(List<(String, String)> options, String value) {
@@ -285,7 +341,7 @@ class Performer {
     final dead = _partialDate(deathDate) != null;
     final t = _ageText(birthdate, dead ? deathDate : '');
     if (t.isEmpty) return '';
-    return dead ? '$t（去世时）' : t;
+    return dead ? tr('{t}（去世时）', {'t': t}) : t;
   }
 
   /// 拍摄时年龄：按短片拍摄日期推算；短片没填日期就退到去世日期，都没有则按当前日期。
@@ -353,6 +409,9 @@ class Scene {
   final String createdAt;
   final int rating100;
   final int oCounter;
+
+  /// Stash 的已看（播放）次数，与 [oCounter]（O 计数）是两个独立字段。
+  final int playCount;
   final int duration;
   final bool organized;
   final List<String> urls;
@@ -375,6 +434,7 @@ class Scene {
     this.createdAt = '',
     this.rating100 = 0,
     this.oCounter = 0,
+    this.playCount = 0,
     this.duration = 0,
     this.organized = false,
     this.urls = const [],
@@ -395,6 +455,7 @@ class Scene {
         createdAt: _s(j?['created_at']),
         rating100: _i(j?['rating100']),
         oCounter: _i(j?['o_counter']),
+        playCount: _i(j?['play_count']),
         // 时长不在 Scene 顶层，取第一个文件的 duration（同一文件组时长一致）。
         duration: j?['files'] is List && (j['files'] as List).isNotEmpty
             ? _i((j['files'] as List).first?['duration'])
@@ -421,7 +482,7 @@ class Scene {
   static List<Scene> listFrom(dynamic v) =>
       _ml(v).map(Scene.fromJson).toList();
 
-  String get displayTitle => title.isNotEmpty ? title : '（无标题）';
+  String get displayTitle => title.isNotEmpty ? title : tr('（无标题）');
 
   /// 第一个文件的主文件名（去目录、去扩展名）。清除削刮后用它回填标题。
   String get fileBaseName {
@@ -436,13 +497,15 @@ class Scene {
   /// 优先用用户手动设置的封面（cover），否则回退到视频自动截图 paths.raw。
   String get coverPath => cover.isNotEmpty ? cover : paths.raw;
 
-  Scene copyWith({bool? organized}) => Scene(
+  Scene copyWith({bool? organized, int? playCount}) => Scene(
         id: id,
         title: title,
         details: details,
         date: date,
+        createdAt: createdAt,
         rating100: rating100,
         oCounter: oCounter,
+        playCount: playCount ?? this.playCount,
         duration: duration,
         organized: organized ?? this.organized,
         urls: urls,
@@ -452,6 +515,7 @@ class Scene {
         paths: paths,
         files: files,
         captions: captions,
+        cover: cover,
       );
 }
 

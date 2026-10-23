@@ -5,6 +5,7 @@ import '../widgets/common.dart';
 import 'performer_detail_page.dart';
 import 'scrape_page.dart';
 import 'studio_edit_page.dart';
+import '../l10n/l10n.dart';
 
 /// 工作室详情页：图标 + 短片数 + 关联短片。
 class StudioDetailPage extends StatefulWidget {
@@ -29,11 +30,11 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
     try {
       await buildApi().updateStudio({'id': s.id, 'favorite': !s.favorite});
       if (!mounted) return;
-      showToast(context, s.favorite ? '已取消收藏' : '已收藏');
+      showToast(context, s.favorite ? tr('已取消收藏') : tr('已收藏'));
       _load();
     } catch (e) {
       if (!mounted) return;
-      showToast(context, '操作失败：$e', error: true);
+      showToast(context, tr('操作失败：{error}', {'error': e}), error: true);
     }
   }
 
@@ -43,18 +44,19 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除工作室'),
-        content: Text('确定删除「${name.isEmpty ? '此工作室' : name}」吗？\n'
-            '已有短片不会受影响，但工作室档案会被永久删除。'),
+        title:  Text(tr('删除工作室')),
+        content: Text(tr(
+            '确定删除「{name}」吗？\n已有短片不会受影响，但工作室档案会被永久删除。',
+            {'name': name.isEmpty ? tr('此工作室') : name})),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+              child:  Text(tr('取消'))),
           FilledButton(
               style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFE5533D)),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('删除')),
+              child:  Text(tr('删除'))),
         ],
       ),
     );
@@ -66,7 +68,7 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('删除失败：$e')));
+          .showSnackBar(SnackBar(content: Text(tr('删除失败：{error}', {'error': e}))));
     }
   }
 
@@ -93,7 +95,7 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
         _s = s;
         _loading = false;
       });
-      if (s == null && mounted) setState(() => _error = '加载失败');
+      if (s == null && mounted) setState(() => _error = tr('加载失败'));
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -124,12 +126,12 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
     final s = _s;
     return Scaffold(
       appBar: AppBar(
-          title: Text(s != null && s.name.isNotEmpty ? s.name : '工作室详情',
+          title: Text(s != null && s.name.isNotEmpty ? s.name : tr('工作室详情'),
               overflow: TextOverflow.ellipsis),
           actions: [
             if (s != null)
               IconButton(
-                tooltip: '编辑工作室',
+                tooltip: tr('编辑工作室'),
                 onPressed: () async {
                   final ok = await Navigator.push<bool>(
                     context,
@@ -142,13 +144,13 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
               ),
             if (s != null)
               IconButton(
-                tooltip: s.favorite ? '取消收藏' : '收藏',
+                tooltip: s.favorite ? tr('取消收藏') : tr('收藏'),
                 onPressed: _toggleFav,
                 icon: Icon(s.favorite ? Icons.star : Icons.star_border),
               ),
             if (s != null)
               IconButton(
-                tooltip: '删除工作室',
+                tooltip: tr('删除工作室'),
                 onPressed: () => _confirmDelete(),
                 icon: const Icon(Icons.delete_outline),
               ),
@@ -158,7 +160,7 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
           : s == null
               ? StatusView(
                   loading: false,
-                  empty: _error.isNotEmpty ? _error : '加载失败',
+                  empty: _error.isNotEmpty ? _error : tr('加载失败'),
                   error: _error,
                   onRetry: _load)
               : ListView(
@@ -193,12 +195,14 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
                         style: theme.textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.bold)),
                     if (s.sceneCount > 0)
-                      Text('短片数：${s.sceneCount}',
+                      Text(tr('短片数：{count}', {'count': s.sceneCount}),
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                     if (s.rating100 > 0)
-                      Text('评分：${(s.rating100 / 20).toStringAsFixed(1)} / 5.0',
+                      Text(
+                        tr('评分：{rating} / 5.0',
+                            {'rating': (s.rating100 / 20).toStringAsFixed(1)}),
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
@@ -208,7 +212,7 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
                         dense: true,
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.account_tree_outlined, size: 20),
-                        title: Text('上级工作室：${s.parentName}',
+                        title: Text(tr('上级工作室：{name}', {'name': s.parentName}),
                             style: const TextStyle(fontSize: 13)),
                         trailing: const Icon(Icons.chevron_right, size: 18),
                         onTap: () async {
@@ -223,7 +227,7 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
                       ),
                     if (s.childStudios.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text('子工作室（${s.childStudios.length}）',
+                      Text(tr('子工作室（{count}）', {'count': s.childStudios.length}),
                           style: theme.textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 4),
@@ -271,7 +275,7 @@ class _StudioDetailPageState extends State<StudioDetailPage> {
                     OutlinedButton.icon(
                       onPressed: _openScrape,
                       icon: const Icon(Icons.travel_explore, size: 18),
-                      label: const Text('削刮（Stash-box）'),
+                      label:  Text(tr('削刮（Stash-box）')),
                     ),
 
                     RelatedScenes(
@@ -329,7 +333,7 @@ class _TagDetailPageState extends State<TagDetailPage> {
         _t = t;
         _loading = false;
       });
-      if (t == null && mounted) setState(() => _error = '加载失败');
+      if (t == null && mounted) setState(() => _error = tr('加载失败'));
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -349,7 +353,7 @@ class _TagDetailPageState extends State<TagDetailPage> {
           : t == null
               ? StatusView(
                   loading: false,
-                  empty: _error.isNotEmpty ? _error : '加载失败',
+                  empty: _error.isNotEmpty ? _error : tr('加载失败'),
                   error: _error,
                   onRetry: _load)
               : ListView(

@@ -7,6 +7,7 @@ import 'performer_merge_page.dart';
 import 'scene_detail_page.dart';
 import 'scrape_page.dart';
 import 'tag_detail_page.dart';
+import '../l10n/l10n.dart';
 
 /// 关联短片双列横卡 + 无限滚动（演员 / 工作室 / 标签详情共用）。
 class RelatedScenes extends StatefulWidget {
@@ -33,17 +34,18 @@ class _RelatedScenesState extends State<RelatedScenes> {
   String _direction = 'DESC';
 
   /// 排序选项（与 Stash 0.31.1 SceneSorter 对齐：date_added→created_at、file_size→filesize、studio_name→studio）。
-  static const List<(String, String)> _sortOptions = [
-    ('date', '发行日期'),
-    ('created_at', '添加时间'),
-    ('title', '标题'),
-    ('rating', '评分'),
-    ('o_counter', '播放次数'),
-    ('duration', '时长'),
-    ('filesize', '文件大小'),
-    ('performer_count', '演员数'),
-    ('studio', '工作室'),
-    ('tag_count', '标签数'),
+  static List<(String, String)> get _sortOptions => [
+    ('date', tr('发行日期')),
+    ('created_at', tr('添加时间')),
+    ('title', tr('标题')),
+    ('rating', tr('评分')),
+    ('play_count', tr('播放次数')),
+    ('o_counter', tr('O 计数')),
+    ('duration', tr('时长')),
+    ('filesize', tr('文件大小')),
+    ('performer_count', tr('演员数')),
+    ('studio', tr('工作室')),
+    ('tag_count', tr('标签数')),
   ];
 
   String get _sortLabel {
@@ -146,7 +148,7 @@ class _RelatedScenesState extends State<RelatedScenes> {
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
                 child: Row(children: [
                   Expanded(
-                    child: Text('排序方式',
+                    child: Text(tr('排序方式'),
                         style: theme.textTheme.titleMedium),
                   ),
                   TextButton.icon(
@@ -160,7 +162,7 @@ class _RelatedScenesState extends State<RelatedScenes> {
                       size: 16,
                     ),
                     label: Text(
-                      _direction == 'DESC' ? '从新到旧' : '从旧到新',
+                      _direction == 'DESC' ? tr('从新到旧') : tr('从旧到新'),
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -209,10 +211,10 @@ class _RelatedScenesState extends State<RelatedScenes> {
     final theme = Theme.of(context);
     if (_total == 0 && !_loadingMore && _error.isEmpty) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SectionTitle('相关短片'),
+         SectionTitle(tr('相关短片')),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Text('暂无相关短片',
+          child: Text(tr('暂无相关短片'),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         ),
@@ -220,7 +222,8 @@ class _RelatedScenesState extends State<RelatedScenes> {
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        Expanded(child: SectionTitle('短片（$_total）')),
+        Expanded(
+            child: SectionTitle(tr('短片（{total}）', {'total': _total}))),
         Padding(
           padding: const EdgeInsets.only(top: 10),
           child: TextButton.icon(
@@ -258,7 +261,7 @@ class _RelatedScenesState extends State<RelatedScenes> {
               return Center(
                 child: TextButton(
                   onPressed: _loadMore,
-                  child: const Text('加载失败，点击重试',
+                  child:  Text(tr('加载失败，点击重试'),
                       style: TextStyle(fontSize: 12)),
                 ),
               );
@@ -271,7 +274,7 @@ class _RelatedScenesState extends State<RelatedScenes> {
                         child: CircularProgressIndicator(strokeWidth: 2)),
                   )
                 : Center(
-                    child: Text('已经到底了',
+                    child: Text(tr('已经到底了'),
                         style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant)),
                   );
@@ -335,7 +338,7 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
     if (list.isEmpty) return raw;
     const show = 5;
     if (list.length <= show) return list.join('、');
-    return '${list.take(show).join('、')} 等 ${list.length} 个';
+    return '${list.take(show).join('、')} ${tr('等 {count} 个', {'count': list.length})}';
   }
 
   static int _filledCount(List<bool> filled) =>
@@ -378,7 +381,7 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
         _p = p;
         _loading = false;
       });
-      if (p == null && mounted) setState(() => _error = '加载失败');
+      if (p == null && mounted) setState(() => _error = tr('加载失败'));
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -420,11 +423,11 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
       await buildApi()
           .updatePerformer({'id': p.id, 'favorite': !p.favorite});
       if (!mounted) return;
-      showToast(context, p.favorite ? '已取消收藏' : '已收藏');
+      showToast(context, p.favorite ? tr('已取消收藏') : tr('已收藏'));
       _load();
     } catch (e) {
       if (!mounted) return;
-      showToast(context, '操作失败：$e', error: true);
+      showToast(context, tr('操作失败：{error}', {'error': e}), error: true);
     }
   }
 
@@ -434,18 +437,19 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除演员'),
-        content: Text('确定删除「${name.isEmpty ? '此演员' : name}」吗？\n'
-            '该演员不会从已有短片中移除，但演员档案会被永久删除。'),
+        title:  Text(tr('删除演员')),
+        content: Text(tr(
+            '确定删除「{name}」吗？\n该演员不会从已有短片中移除，但演员档案会被永久删除。',
+            {'name': name.isEmpty ? tr('此演员') : name})),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+              child:  Text(tr('取消'))),
           FilledButton(
               style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFE5533D)),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('删除')),
+              child:  Text(tr('删除'))),
         ],
       ),
     );
@@ -457,7 +461,7 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('删除失败：$e')));
+          .showSnackBar(SnackBar(content: Text(tr('删除失败：{error}', {'error': e}))));
     }
   }
 
@@ -467,18 +471,18 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
     final p = _p;
     return Scaffold(
       appBar: AppBar(
-          title: Text(p?.name.isNotEmpty == true ? p!.name : '演员详情',
+          title: Text(p?.name.isNotEmpty == true ? p!.name : tr('演员详情'),
               overflow: TextOverflow.ellipsis),
           actions: [
             if (p != null)
               IconButton(
-                tooltip: p.favorite ? '取消收藏' : '收藏',
+                tooltip: p.favorite ? tr('取消收藏') : tr('收藏'),
                 onPressed: _toggleFav,
                 icon: Icon(p.favorite ? Icons.star : Icons.star_border),
               ),
             if (p != null)
               IconButton(
-                tooltip: '合并演员',
+                tooltip: tr('合并演员'),
                 onPressed: () async {
                   final ok = await Navigator.push<bool>(
                     context,
@@ -494,7 +498,7 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
               ),
             if (p != null)
               IconButton(
-                tooltip: '删除演员',
+                tooltip: tr('删除演员'),
                 onPressed: () => _confirmDelete(),
                 icon: const Icon(Icons.delete_outline),
               ),
@@ -504,7 +508,7 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
           : p == null
               ? StatusView(
                   loading: false,
-                  empty: _error.isNotEmpty ? _error : '加载失败',
+                  empty: _error.isNotEmpty ? _error : tr('加载失败'),
                   error: _error,
                   onRetry: _load)
               : ListView(
@@ -544,19 +548,19 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
                     Row(children: [
                       Expanded(
                           child: OutlinedButton(
-                              onPressed: _openEdit, child: const Text('编辑'))),
+                              onPressed: _openEdit, child:  Text(tr('编辑')))),
                       const SizedBox(width: 10),
                       Expanded(
                           child: OutlinedButton(
-                              onPressed: _openScrape, child: const Text('削刮'))),
+                              onPressed: _openScrape, child:  Text(tr('削刮')))),
                     ]),
 
                     FoldSection(
-                      title: '基本信息',
+                      title: tr('基本信息'),
                       open: true,
                       children: [
                         if (p.aliasParts.isNotEmpty) ...[
-                          InfoRow('别名',
+                          InfoRow(tr('别名'),
                               _showAllAliases
                                   ? p.aliasParts.join('、')
                                   : _aliasPreview(p.aliases)),
@@ -572,69 +576,73 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
                                     () => _showAllAliases = !_showAllAliases),
                                 child: Text(
                                   _showAllAliases
-                                      ? '收起'
-                                      : '查看更多 ${p.aliasParts.length - 5} 个',
+                                      ? tr('收起')
+                                      : tr('查看更多 {count} 个', {'count': p.aliasParts.length - 5}),
                                   style: const TextStyle(fontSize: 12),
                                 ),
                               ),
                             ),
                         ],
                         if (p.gender.isNotEmpty)
-                          InfoRow('性别', enumLabel(kGenderOptions, p.gender)),
+                          InfoRow(tr('性别'), enumLabel(kGenderOptions, p.gender)),
                         if (p.birthdate.isNotEmpty)
-                          InfoRow('出生日期', p.birthdate),
+                          InfoRow(tr('出生日期'), p.birthdate),
                         if (p.ageText.isNotEmpty)
-                          InfoRow('年龄', p.ageText),
+                          InfoRow(tr('年龄'), p.ageText),
                         if (p.deathDate.isNotEmpty)
-                          InfoRow('去世日期', p.deathDate),
-                        if (p.country.isNotEmpty) InfoRow('国家', p.country),
-                        if (p.ethnicity.isNotEmpty) InfoRow('族裔', p.ethnicity),
+                          InfoRow(tr('去世日期'), p.deathDate),
+                        if (p.country.isNotEmpty) InfoRow(tr('国家'), p.country),
+                        if (p.ethnicity.isNotEmpty) InfoRow(tr('族裔'), p.ethnicity),
                         if (p.rating100 > 0)
-                          InfoRow('评分',
+                          InfoRow(tr('评分'),
                               '${(p.rating100 / 20).toStringAsFixed(1)} / 5.0'),
-                        if (p.ignoreAutoTag) const InfoRow('自动打标', '已忽略'),
+                        if (p.ignoreAutoTag)  InfoRow(tr('自动打标'), tr('已忽略')),
                       ],
                     ),
 
-                    _foldIf('身体数据', [
-                      if (p.heightCm > 0) InfoRow('身高', '${p.heightCm} cm'),
-                      if (p.weight > 0) InfoRow('体重', '${p.weight} kg'),
+                    _foldIf(tr('身体数据'), [
+                      if (p.heightCm > 0) InfoRow(tr('身高'), '${p.heightCm} cm'),
+                      if (p.weight > 0) InfoRow(tr('体重'), '${p.weight} kg'),
                       if (p.measurements.isNotEmpty)
-                        InfoRow('三围', p.measurements),
-                      if (p.fakeTits.isNotEmpty) InfoRow('隆胸', p.fakeTits),
+                        InfoRow(tr('三围'), p.measurements),
+                      if (p.fakeTits.isNotEmpty) InfoRow(tr('隆胸'), p.fakeTits),
                       if (p.penisLength > 0)
-                        InfoRow('阴茎长度', '${p.penisLength.toStringAsFixed(1)} cm'),
+                        InfoRow(tr('阴茎长度'), '${p.penisLength.toStringAsFixed(1)} cm'),
                       if (p.circumcised.isNotEmpty)
-                        InfoRow('环切状态',
+                        InfoRow(tr('环切状态'),
                             enumLabel(kCircumcisedOptions, p.circumcised)),
-                      if (p.eyeColor.isNotEmpty) InfoRow('瞳色', p.eyeColor),
-                      if (p.hairColor.isNotEmpty) InfoRow('发色', p.hairColor),
-                    ], summary: '${_filledCount([
-                      p.heightCm > 0,
-                      p.weight > 0,
-                      p.measurements.isNotEmpty,
-                      p.fakeTits.isNotEmpty,
-                      p.penisLength > 0,
-                      p.circumcised.isNotEmpty,
-                      p.eyeColor.isNotEmpty,
-                      p.hairColor.isNotEmpty,
-                    ])} 项'),
+                      if (p.eyeColor.isNotEmpty) InfoRow(tr('瞳色'), p.eyeColor),
+                      if (p.hairColor.isNotEmpty) InfoRow(tr('发色'), p.hairColor),
+                    ], summary: tr('{count} 项', {
+                      'count': _filledCount([
+                        p.heightCm > 0,
+                        p.weight > 0,
+                        p.measurements.isNotEmpty,
+                        p.fakeTits.isNotEmpty,
+                        p.penisLength > 0,
+                        p.circumcised.isNotEmpty,
+                        p.eyeColor.isNotEmpty,
+                        p.hairColor.isNotEmpty,
+                      ])
+                    })),
 
-                    _foldIf('职业生涯', [
+                    _foldIf(tr('职业生涯'), [
                       if (p.careerText.isNotEmpty)
-                        InfoRow('从业年限', p.careerText),
-                      if (p.tattoos.isNotEmpty) InfoRow('纹身', p.tattoos),
-                      if (p.piercings.isNotEmpty) InfoRow('穿孔', p.piercings),
-                    ], summary: '${_filledCount([
-                      p.careerText.isNotEmpty,
-                      p.tattoos.isNotEmpty,
-                      p.piercings.isNotEmpty,
-                    ])} 项'),
+                        InfoRow(tr('从业年限'), p.careerText),
+                      if (p.tattoos.isNotEmpty) InfoRow(tr('纹身'), p.tattoos),
+                      if (p.piercings.isNotEmpty) InfoRow(tr('穿孔'), p.piercings),
+                    ], summary: tr('{count} 项', {
+                      'count': _filledCount([
+                        p.careerText.isNotEmpty,
+                        p.tattoos.isNotEmpty,
+                        p.piercings.isNotEmpty,
+                      ])
+                    })),
 
                     if (p.urls.isNotEmpty)
                       FoldSection(
-                        title: '链接',
-                        summary: '${p.urls.length} 个',
+                        title: tr('链接'),
+                        summary: tr('{count} 个', {'count': p.urls.length}),
                         children: [
                           for (final u in p.urls)
                             Padding(
@@ -647,8 +655,8 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
 
                     if (p.tags.isNotEmpty)
                       FoldSection(
-                        title: '标签',
-                        summary: '${p.tags.length} 个',
+                        title: tr('标签'),
+                        summary: tr('{count} 个', {'count': p.tags.length}),
                         children: [
                           Wrap(children: [
                             for (final t in p.tags)
@@ -664,20 +672,20 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
                         ],
                       ),
 
-                    _foldIf('档案', [
+                    _foldIf(tr('档案'), [
                       if (p.details.isNotEmpty)
                         Text(p.details,
                             style: theme.textTheme.bodyMedium
                                 ?.copyWith(height: 1.6)),
-                      InfoRow('短片', '${p.sceneCount}'),
-                      if (p.imageCount > 0) InfoRow('图片', '${p.imageCount}'),
+                      InfoRow(tr('短片'), '${p.sceneCount}'),
+                      if (p.imageCount > 0) InfoRow(tr('图片'), '${p.imageCount}'),
                       if (p.galleryCount > 0)
-                        InfoRow('相册', '${p.galleryCount}'),
-                      if (p.groupCount > 0) InfoRow('合集', '${p.groupCount}'),
-                      if (p.oCounter > 0) InfoRow('O 计数', '${p.oCounter}'),
+                        InfoRow(tr('相册'), '${p.galleryCount}'),
+                      if (p.groupCount > 0) InfoRow(tr('合集'), '${p.groupCount}'),
+                      if (p.oCounter > 0) InfoRow(tr('O 计数'), '${p.oCounter}'),
                       if (p.updatedAt.isNotEmpty)
-                        InfoRow('更新时间', _fmtTime(p.updatedAt)),
-                    ], summary: p.details.isEmpty ? '统计' : '简介 + 统计'),
+                        InfoRow(tr('更新时间'), _fmtTime(p.updatedAt)),
+                    ], summary: p.details.isEmpty ? tr('统计') : tr('简介 + 统计')),
 
                     RelatedScenes(
                       scrollController: _scroll,

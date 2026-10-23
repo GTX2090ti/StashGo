@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 
 enum Appearance { system, light, dark }
@@ -12,7 +13,7 @@ enum Appearance { system, light, dark }
 enum AddrSlot { lan, wan }
 
 extension AddrSlotX on AddrSlot {
-  String get label => this == AddrSlot.lan ? '内网' : '外网';
+  String get label => this == AddrSlot.lan ? tr('内网') : tr('外网');
 }
 
 /// 服务器档案：内网/外网双地址 + 独立 ApiKey。
@@ -76,6 +77,7 @@ class AppSettings extends ChangeNotifier {
   static const _kReason = 'switch_reason';
   static const _kSafeMode = 'safe_mode';
   static const _kBiometricLock = 'biometric_lock';
+  static const _kLanguage = 'language';
 
   List<Profile> profiles = [];
   String currentProfileName = '';
@@ -182,6 +184,11 @@ class AppSettings extends ChangeNotifier {
       lastSwitchReason = p.getString(_kReason) ?? '';
       _safeMode = p.getBool(_kSafeMode) ?? false;
       _biometricLock = p.getBool(_kBiometricLock) ?? false;
+      final lang = p.getString(_kLanguage) ?? 'system';
+      L10n.preference = AppLanguage.values.firstWhere(
+        (e) => e.name == lang,
+        orElse: () => AppLanguage.system,
+      );
       storageAvailable = true;
     } catch (e) {
       storageAvailable = false;
@@ -219,6 +226,7 @@ class AppSettings extends ChangeNotifier {
       await p.setString(_kReason, lastSwitchReason);
       await p.setBool(_kSafeMode, _safeMode);
       await p.setBool(_kBiometricLock, _biometricLock);
+      await p.setString(_kLanguage, L10n.preference.name);
     } catch (e) {
       storageAvailable = false;
       notifyListeners();
@@ -251,7 +259,7 @@ class AppSettings extends ChangeNotifier {
     currentProfileName = name;
     lastLatencyMs = -1;
     await _flush();
-    unawaited(autoSelect('切换档案'));
+    unawaited(autoSelect(tr('切换档案')));
   }
 
   /// 兼容旧调用：直接写当前档案的单一内网地址 + ApiKey。
@@ -265,6 +273,13 @@ class AppSettings extends ChangeNotifier {
 
   Future<void> setAppearance(Appearance mode) async {
     appearance = mode;
+    await _flush();
+  }
+
+  AppLanguage get language => L10n.preference;
+
+  Future<void> setLanguage(AppLanguage lang) async {
+    L10n.preference = lang;
     await _flush();
   }
 
@@ -299,22 +314,25 @@ class AppSettings extends ChangeNotifier {
 
   Future<void> setSlot(AddrSlot slot, bool manual) async {
     if (slotUrl(slot).isEmpty) {
-      lastSwitchReason = '切换到${slot.label}失败：该侧地址未配置';
+      lastSwitchReason = tr('切换到{slot}失败：该侧地址未配置',
+          {'slot': tr(slot.label)});
       notifyListeners();
       return;
     }
     activeSlot = slot;
     manualLock = manual;
     lastLatencyMs = -1;
-    lastSwitchReason = manual ? '已手动锁定${slot.label}地址' : '已切换到${slot.label}地址';
+    lastSwitchReason = manual
+        ? tr('已手动锁定{slot}地址', {'slot': tr(slot.label)})
+        : tr('已切换到{slot}地址', {'slot': tr(slot.label)});
     await _flush();
   }
 
   Future<void> restoreAuto() async {
     manualLock = false;
-    lastSwitchReason = '恢复自动选择（优先内网）';
+    lastSwitchReason = tr('恢复自动选择（优先内网）');
     await _flush();
-    await autoSelect('解除锁定');
+    await autoSelect(tr('解除锁定'));
   }
 
   /// 实测某地址可达性与延迟；可达返回延迟 ms，不可达返回 -2，未配置返回 -1。
@@ -353,9 +371,9 @@ class AppSettings extends ChangeNotifier {
     wanLatencyMs = await probeLatency(wanUrl, key);
     lastLatencyMs = activeSlot == AddrSlot.lan ? lanLatencyMs : wanLatencyMs;
     if (lanLatencyMs < 0 && wanLatencyMs < 0) {
-      lastSwitchReason = '内网与外网地址均不可达（测速）';
+      lastSwitchReason = tr('内网与外网地址均不可达（测速）');
     } else if (lastSwitchReason.isEmpty) {
-      lastSwitchReason = '测速完成';
+      lastSwitchReason = tr('测速完成');
     }
     _probing = false;
     await _flush();
@@ -369,7 +387,7 @@ class AppSettings extends ChangeNotifier {
     if (lan.isNotEmpty && wan.isEmpty) {
       if (activeSlot != AddrSlot.lan) {
         activeSlot = AddrSlot.lan;
-        lastSwitchReason = '仅配置了内网地址';
+        lastSwitchReason = tr('仅配置了内网地址');
         await _flush();
       }
       return;
@@ -377,7 +395,7 @@ class AppSettings extends ChangeNotifier {
     if (lan.isEmpty && wan.isNotEmpty) {
       if (activeSlot != AddrSlot.wan) {
         activeSlot = AddrSlot.wan;
-        lastSwitchReason = '仅配置了外网地址';
+        lastSwitchReason = tr('仅配置了外网地址');
         await _flush();
       }
       return;
@@ -386,7 +404,8 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
     try {
       if (manualLock) {
-        lastSwitchReason = '已手动锁定${activeSlot.label}地址（$reason）';
+        lastSwitchReason = tr('已手动锁定{slot}地址（{reason}）',
+          {'slot': tr(activeSlot.label), 'reason': reason});
         notifyListeners();
         return;
       }
@@ -396,10 +415,11 @@ class AppSettings extends ChangeNotifier {
         lastLatencyMs = t1;
         if (activeSlot != AddrSlot.lan) {
           activeSlot = AddrSlot.lan;
-          lastSwitchReason = '内网实测可达，自动切换（${t1}ms）';
+          lastSwitchReason = tr('内网实测可达，自动切换（{ms}ms）', {'ms': t1});
           await _flush();
         } else {
-          lastSwitchReason = '内网实测可达（${t1}ms，$reason）';
+          lastSwitchReason = tr('内网实测可达（{ms}ms，{reason}）',
+              {'ms': t1, 'reason': reason});
           notifyListeners();
         }
         return;
@@ -410,15 +430,16 @@ class AppSettings extends ChangeNotifier {
         lastLatencyMs = t2;
         if (activeSlot != AddrSlot.wan) {
           activeSlot = AddrSlot.wan;
-          lastSwitchReason = '内网不可达，自动切换外网（${t2}ms）';
+          lastSwitchReason =
+            tr('内网不可达，自动切换外网（{ms}ms）', {'ms': t2});
           await _flush();
         } else {
-          lastSwitchReason = '外网实测可达（${t2}ms）';
+          lastSwitchReason = tr('外网实测可达（{ms}ms）', {'ms': t2});
           notifyListeners();
         }
         return;
       }
-      lastSwitchReason = '内网与外网地址均不可达';
+      lastSwitchReason = tr('内网与外网地址均不可达');
       await _flush();
     } finally {
       _probing = false;

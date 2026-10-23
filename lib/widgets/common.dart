@@ -8,6 +8,7 @@ import 'zh_toolbar.dart';
 
 import '../api/stash_api.dart';
 import '../settings/app_settings.dart';
+import '../l10n/l10n.dart';
 
 /// 全局 API 客户端：跟随当前档案 / 生效地址重建。
 StashApi buildApi() =>
@@ -126,7 +127,7 @@ class _SelectSheetState extends State<_SelectSheet> {
             if (widget.multi)
               TextButton(
                 onPressed: () => Navigator.pop(context, _sel),
-                child: const Text('完成'),
+                child:  Text(tr('完成')),
               ),
           ]),
         ),
@@ -137,13 +138,13 @@ class _SelectSheetState extends State<_SelectSheet> {
             contextMenuBuilder: zhContextMenuBuilder,
             onChanged: (v) => setState(() => _q = v),
             decoration: InputDecoration(
-              hintText: '搜索…',
+              hintText: tr('搜索…'),
               prefixIcon: const Icon(Icons.search, size: 18),
               isDense: true,
               suffixIcon: _q.isEmpty
                   ? null
                   : IconButton(
-                      tooltip: '清空',
+                      tooltip: tr('清空'),
                       icon: const Icon(Icons.clear, size: 16),
                       onPressed: () {
                         _searchCtrl.clear();
@@ -161,8 +162,8 @@ class _SelectSheetState extends State<_SelectSheet> {
         const Divider(height: 1),
         Expanded(
           child: filtered.isEmpty
-              ? const Center(
-                  child: Text('无匹配项', style: TextStyle(fontSize: 12)))
+              ?  Center(
+                  child: Text(tr('无匹配项'), style: TextStyle(fontSize: 12)))
               : ListView.builder(
                   itemCount: filtered.length,
                   itemBuilder: (_, i) {
@@ -391,7 +392,7 @@ class SceneCard extends StatelessWidget {
           const SizedBox(height: 5),
           Expanded(
             child: Text(
-              title.isEmpty ? '（无标题）' : title,
+              title.isEmpty ? tr('（无标题）') : title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall
@@ -508,13 +509,13 @@ class SceneListCard extends StatelessWidget {
                         color: Colors.black.withValues(alpha: 0.62),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Row(
+                      child:  Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.subtitles,
                                 size: 12, color: Colors.white),
                             SizedBox(width: 2),
-                            Text('字幕',
+                            Text(tr('字幕'),
                                 style: TextStyle(
                                     fontSize: 10, color: Colors.white)),
                           ]),
@@ -543,7 +544,7 @@ class SceneListCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title.isEmpty ? '（无标题）' : title,
+                    title.isEmpty ? tr('（无标题）') : title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall
@@ -644,15 +645,20 @@ class PageBar extends StatelessWidget {
             height: 32,
             child: OutlinedButton(
               onPressed: (page > 1 && !loading) ? onPrev : null,
-              child: const Text('上一页', style: TextStyle(fontSize: 12)),
+              child:  Text(tr('上一页'), style: TextStyle(fontSize: 12)),
             ),
           ),
           Expanded(
             child: Center(
               child: Text(
                 showTotal
-                    ? '第 $page / $totalPages 页（共 $total）'
-                    : '第 $page / $totalPages 页',
+                    ? tr('第 {page} / {totalPages} 页（共 {total}）', {
+                        'page': page,
+                        'totalPages': totalPages,
+                        'total': total,
+                      })
+                    : tr('第 {page} / {totalPages} 页',
+                        {'page': page, 'totalPages': totalPages}),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 overflow: TextOverflow.ellipsis,
@@ -663,7 +669,7 @@ class PageBar extends StatelessWidget {
             height: 32,
             child: OutlinedButton(
               onPressed: (page < totalPages && !loading) ? onNext : null,
-              child: const Text('下一页', style: TextStyle(fontSize: 12)),
+              child:  Text(tr('下一页'), style: TextStyle(fontSize: 12)),
             ),
           ),
         ],
@@ -846,14 +852,14 @@ class StatusView extends StatelessWidget {
             const SizedBox(
                 width: 32, height: 32, child: CircularProgressIndicator(strokeWidth: 2)),
             const SizedBox(height: 10),
-            Text('加载中…', style: theme.textTheme.bodySmall),
+            Text(tr('加载中…'), style: theme.textTheme.bodySmall),
           ] else ...[
             Text(empty,
                 textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 12),
             FilledButton.tonal(
               onPressed: onRetry,
-              child: const Text('重试'),
+              child:  Text(tr('重试')),
             ),
           ],
         ],

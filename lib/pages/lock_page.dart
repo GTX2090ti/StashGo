@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../settings/app_settings.dart';
+import '../l10n/l10n.dart';
 
 /// 面容解锁页：App 启动或回前台且开启了面容解锁时显示，
 /// 通过 Face ID / Touch ID 验证后进入主界面。
@@ -55,7 +56,7 @@ class _LockPageState extends State<LockPage> {
     });
     try {
       final ok = await _auth.authenticate(
-        localizedReason: '验证您的身份以解锁 Stash',
+        localizedReason: tr('验证您的身份以解锁 Stash'),
         options: const AuthenticationOptions(
           // 允许回退到系统密码，避免 Face ID 不可用时锁死
           stickyAuth: true,
@@ -71,7 +72,7 @@ class _LockPageState extends State<LockPage> {
         setState(() {
           _checking = false;
           _firstTry = false;
-          _status = '验证失败，请重试';
+          _status = tr('验证失败，请重试');
         });
       }
     } catch (e) {
@@ -79,7 +80,7 @@ class _LockPageState extends State<LockPage> {
       setState(() {
         _checking = false;
         _firstTry = false;
-        _status = '无法使用生物识别：$e';
+        _status = tr('无法使用生物识别：{error}', {'error': e});
       });
     }
   }
@@ -112,7 +113,7 @@ class _LockPageState extends State<LockPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _hasBiometrics ? '使用面容或指纹解锁' : '此设备不支持生物识别',
+                    _hasBiometrics ? tr('使用面容或指纹解锁') : tr('此设备不支持生物识别'),
                     style: TextStyle(
                       fontSize: 14,
                       color: dark ? const Color(0xFF9AA0A6) : const Color(0xFF6B6F76),
@@ -128,7 +129,7 @@ class _LockPageState extends State<LockPage> {
                       child: FilledButton.icon(
                         onPressed: _hasBiometrics ? _authenticate : null,
                         icon: const Icon(Icons.face_retouching_natural),
-                        label: Text(_hasBiometrics ? '面容 / 指纹解锁' : '无法验证'),
+                        label: Text(_hasBiometrics ? tr('面容 / 指纹解锁') : tr('无法验证')),
                       ),
                     ),
                     if (_status.isNotEmpty) ...[
@@ -144,7 +145,7 @@ class _LockPageState extends State<LockPage> {
                     if (!_hasBiometrics) ...[
                       const SizedBox(height: 12),
                       Text(
-                        '如需解锁保护，请在设置中关闭面容解锁，或检查系统生物识别设置',
+                        tr('如需解锁保护，请在设置中关闭面容解锁，或检查系统生物识别设置'),
                         style: TextStyle(
                           fontSize: 12,
                           color: dark ? const Color(0xFF9AA0A6) : const Color(0xFF6B6F76),

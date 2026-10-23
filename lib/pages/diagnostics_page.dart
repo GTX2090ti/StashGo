@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../settings/app_settings.dart';
 import '../widgets/common.dart';
+import '../l10n/l10n.dart';
 
 /// 网络诊断页（对齐 iOS DiagnosticsView）：连接状态、Stash 版本、两侧地址延迟、选路结论。
 class DiagnosticsPage extends StatefulWidget {
@@ -32,7 +33,7 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
       try {
         _version = await buildApi().version();
       } catch (e) {
-        _version = '查询失败：$e';
+        _version = tr('查询失败：{error}', {'error': e});
       }
     }
     if (!mounted) return;
@@ -40,8 +41,8 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
   }
 
   String _latency(int ms) {
-    if (ms == -1) return '未配置';
-    if (ms == -2) return '不可达';
+    if (ms == -1) return tr('未配置');
+    if (ms == -2) return tr('不可达');
     return '$ms ms';
   }
 
@@ -50,10 +51,10 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
     final cfg = AppSettings.instance;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('网络诊断'),
+        title:  Text(tr('网络诊断')),
         actions: [
           IconButton(
-              tooltip: '重新诊断',
+              tooltip: tr('重新诊断'),
               icon: const Icon(Icons.refresh),
               onPressed: _busy ? null : _run),
         ],
@@ -66,26 +67,26 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
               padding: EdgeInsets.only(bottom: 16),
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             ),
-          const SectionTitle('当前档案'),
-          InfoRow('档案名', cfg.profileName),
-          InfoRow('生效地址', cfg.activeSlot.label),
-          InfoRow('生效 URL', cfg.baseUrl.isEmpty ? '（未配置）' : cfg.baseUrl),
-          InfoRow('选路结论',
+           SectionTitle(tr('当前档案')),
+          InfoRow(tr('档案名'), cfg.profileName),
+          InfoRow(tr('生效地址'), cfg.activeSlot.label),
+          InfoRow(tr('生效 URL'), cfg.baseUrl.isEmpty ? tr('（未配置）') : cfg.baseUrl),
+          InfoRow(tr('选路结论'),
               cfg.lastSwitchReason.isEmpty ? '—' : cfg.lastSwitchReason),
-          const SectionTitle('地址探测'),
-          InfoRow('内网地址', _latency(cfg.lanLatencyMs)),
-          InfoRow('外网地址', _latency(cfg.wanLatencyMs)),
-          const SectionTitle('服务端'),
-          InfoRow('Stash 版本', _version.isEmpty ? '（未检测）' : _version),
-          const SectionTitle('操作'),
+           SectionTitle(tr('地址探测')),
+          InfoRow(tr('内网地址'), _latency(cfg.lanLatencyMs)),
+          InfoRow(tr('外网地址'), _latency(cfg.wanLatencyMs)),
+           SectionTitle(tr('服务端')),
+          InfoRow(tr('Stash 版本'), _version.isEmpty ? tr('（未检测）') : _version),
+           SectionTitle(tr('操作')),
           FilledButton.tonal(
             onPressed: _busy
                 ? null
                 : () async {
                     await cfg.probeBoth();
-                    await cfg.autoSelect('诊断页重新选路');
+                    await cfg.autoSelect(tr('诊断页重新选路'));
                   },
-            child: const Text('重新测速并选路'),
+            child:  Text(tr('重新测速并选路')),
           ),
           const SizedBox(height: 24),
         ],

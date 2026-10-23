@@ -5,6 +5,7 @@ import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
 import 'performer_create_page.dart';
+import '../l10n/l10n.dart';
 
 /// 短片编辑页：标题 / 日期 / 评分 / 工作室 / 演员 / 标签 / URL / 简介。
 class SceneEditPage extends StatefulWidget {
@@ -73,7 +74,7 @@ class _SceneEditPageState extends State<SceneEditPage> {
       _performers = await _api.allPerformers();
       _tags = await _api.allTags();
     } catch (e) {
-      _error = '加载失败：$e';
+      _error = tr('加载失败：{error}', {'error': e});
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -99,7 +100,7 @@ class _SceneEditPageState extends State<SceneEditPage> {
 
   /// 新建工作室：先查同名（Stash 0.31.1 不允许重名）→ 存在则直接选中，否则创建。
   Future<void> _createStudio() async {
-    final name = await _askName('新建工作室', '工作室名称');
+    final name = await _askName(tr('新建工作室'), tr('工作室名称'));
     if (name == null || name.isEmpty || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -114,7 +115,7 @@ class _SceneEditPageState extends State<SceneEditPage> {
           _studioId = s.id;
         });
         messenger.showSnackBar(
-            SnackBar(content: Text('工作室已存在，已选中：${s.name}')));
+            SnackBar(content: Text(tr('工作室已存在，已选中：{name}', {'name': s.name}))));
         return;
       }
       final id = await _api.createStudio(name);
@@ -125,14 +126,15 @@ class _SceneEditPageState extends State<SceneEditPage> {
       });
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text('创建失败：$e')));
+        messenger.showSnackBar(
+            SnackBar(content: Text(tr('创建失败：{error}', {'error': e}))));
       }
     }
   }
 
   /// 新建标签：先查同名（Stash 0.31.1 不允许重名）→ 存在则直接选中，否则创建。
   Future<void> _createTag() async {
-    final name = await _askName('新建标签', '标签名称');
+    final name = await _askName(tr('新建标签'), tr('标签名称'));
     if (name == null || name.isEmpty || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -147,7 +149,7 @@ class _SceneEditPageState extends State<SceneEditPage> {
           _tagIds.add(t.id);
         });
         messenger.showSnackBar(
-            SnackBar(content: Text('标签已存在，已选中：${t.name}')));
+            SnackBar(content: Text(tr('标签已存在，已选中：{name}', {'name': t.name}))));
         return;
       }
       final id = await _api.createTag(name);
@@ -158,7 +160,8 @@ class _SceneEditPageState extends State<SceneEditPage> {
       });
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text('创建失败：$e')));
+        messenger.showSnackBar(
+            SnackBar(content: Text(tr('创建失败：{error}', {'error': e}))));
       }
     }
   }
@@ -179,10 +182,10 @@ class _SceneEditPageState extends State<SceneEditPage> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+              onPressed: () => Navigator.pop(ctx), child:  Text(tr('取消'))),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('创建'),
+            child:  Text(tr('创建')),
           ),
         ],
       ),
@@ -216,7 +219,7 @@ class _SceneEditPageState extends State<SceneEditPage> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = '保存失败：$e');
+      setState(() => _error = tr('保存失败：{error}', {'error': e}));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -227,38 +230,38 @@ class _SceneEditPageState extends State<SceneEditPage> {
     for (final s in _studios) {
       if (s.id == _studioId) return s.name;
     }
-    return '选择工作室';
+    return tr('选择工作室');
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('编辑短片')),
+      appBar: AppBar(title:  Text(tr('编辑短片'))),
       body: _loading
           ? StatusView(loading: true, empty: '', onRetry: _load)
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
-                const SectionTitle('基本信息'),
+                 SectionTitle(tr('基本信息')),
                 TextField(
                     controller: _titleCtrl,
                     contextMenuBuilder: zhContextMenuBuilder,
-                    decoration: const InputDecoration(labelText: '标题')),
+                    decoration:  InputDecoration(labelText: tr('标题'))),
                 const SizedBox(height: 12),
                 TextField(
                     controller: _dateCtrl,
                     contextMenuBuilder: zhContextMenuBuilder,
                     inputFormatters: const [DateDashInputFormatter()],
                     decoration:
-                        const InputDecoration(labelText: '日期（yyyy-MM-dd）')),
+                         InputDecoration(labelText: tr('日期（yyyy-MM-dd）'))),
                 Row(children: [
-                  const Text('评分'),
+                   Text(tr('评分')),
                   const Spacer(),
                   Text(
                     _rating > 0
                         ? '${(_rating / 20).toStringAsFixed(1)} / 5.0'
-                        : '未评分',
+                        : tr('未评分'),
                     style: theme.textTheme.bodySmall,
                   ),
                 ]),
@@ -267,21 +270,21 @@ class _SceneEditPageState extends State<SceneEditPage> {
                   max: 100,
                   divisions: 20,
                   label: _rating == 0
-                      ? '未评分'
+                      ? tr('未评分')
                       : (_rating / 20).toStringAsFixed(1),
                   onChanged: (v) => setState(() => _rating = v.round()),
                 ),
 
-                const SectionTitle('工作室'),
+                 SectionTitle(tr('工作室')),
                 if (_studios.isEmpty)
-                  Text('未加载到工作室', style: theme.textTheme.bodySmall),
+                  Text(tr('未加载到工作室'), style: theme.textTheme.bodySmall),
                 Row(children: [
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () async {
                         final r = await showSingleSelectSheet(
                           context,
-                          title: '选择工作室',
+                          title: tr('选择工作室'),
                           options: [for (final s in _studios) (s.id, s.name)],
                           selectedId: _studioId.isEmpty ? null : _studioId,
                         );
@@ -295,13 +298,14 @@ class _SceneEditPageState extends State<SceneEditPage> {
                   OutlinedButton.icon(
                     onPressed: _createStudio,
                     icon: const Icon(Icons.add_business_outlined, size: 16),
-                    label: const Text('新建'),
+                    label:  Text(tr('新建')),
                   ),
                 ]),
 
-                SectionTitle('演员（${_performerIds.length}）'),
+                SectionTitle(
+                    tr('演员（{count}）', {'count': _performerIds.length})),
                 if (_performers.isEmpty)
-                  Text('未加载到演员', style: theme.textTheme.bodySmall),
+                  Text(tr('未加载到演员'), style: theme.textTheme.bodySmall),
                 if (_performers.isNotEmpty && _performerIds.isNotEmpty)
                   Wrap(
                     spacing: 6,
@@ -324,7 +328,7 @@ class _SceneEditPageState extends State<SceneEditPage> {
                       onPressed: () async {
                         final r = await showMultiSelectSheet(
                           context,
-                          title: '选择演员',
+                          title: tr('选择演员'),
                           options: [
                             for (final p in _performers) (p.id, p.name)
                           ],
@@ -333,18 +337,18 @@ class _SceneEditPageState extends State<SceneEditPage> {
                         if (r != null) setState(() => _performerIds = r);
                       },
                       icon: const Icon(Icons.people_outline, size: 16),
-                      label: const Text('选择演员'),
+                      label:  Text(tr('选择演员')),
                     ),
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: _openCreatePerformer,
                     icon: const Icon(Icons.person_add_alt, size: 16),
-                    label: const Text('新建'),
+                    label:  Text(tr('新建')),
                   ),
                 ]),
 
-                const SectionTitle('URL（每行一个）'),
+                 SectionTitle(tr('URL（每行一个）')),
                 TextField(
                   controller: _urlsCtrl,
                   maxLines: 3,
@@ -352,7 +356,7 @@ class _SceneEditPageState extends State<SceneEditPage> {
                   decoration: const InputDecoration(hintText: 'https://…'),
                 ),
 
-                SectionTitle('标签（${_tagIds.length}）'),
+                SectionTitle(tr('标签（{count}）', {'count': _tagIds.length})),
                 if (_tags.isNotEmpty && _tagIds.isNotEmpty)
                   Wrap(
                     spacing: 6,
@@ -375,30 +379,30 @@ class _SceneEditPageState extends State<SceneEditPage> {
                       onPressed: () async {
                         final r = await showMultiSelectSheet(
                           context,
-                          title: '选择标签',
+                          title: tr('选择标签'),
                           options: [for (final t in _tags) (t.id, t.name)],
                           selected: _tagIds,
                         );
                         if (r != null) setState(() => _tagIds = r);
                       },
                       icon: const Icon(Icons.sell_outlined, size: 16),
-                      label: const Text('选择标签'),
+                      label:  Text(tr('选择标签')),
                     ),
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: _createTag,
                     icon: const Icon(Icons.add_box_outlined, size: 16),
-                    label: const Text('新建'),
+                    label:  Text(tr('新建')),
                   ),
                 ]),
 
-                const SectionTitle('简介'),
+                 SectionTitle(tr('简介')),
                 TextField(
                   controller: _detailsCtrl,
                   maxLines: 5,
                   contextMenuBuilder: zhContextMenuBuilder,
-                  decoration: const InputDecoration(hintText: '简介…'),
+                  decoration:  InputDecoration(hintText: tr('简介…')),
                 ),
 
                 if (_error.isNotEmpty) ...[
@@ -416,7 +420,7 @@ class _SceneEditPageState extends State<SceneEditPage> {
             height: 46,
             child: FilledButton(
               onPressed: _saving ? null : _save,
-              child: Text(_saving ? '保存中…' : '保存'),
+              child: Text(_saving ? tr('保存中…') : tr('保存')),
             ),
           ),
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'l10n/l10n.dart';
 import 'pages/home_page.dart';
 import 'pages/lock_page.dart';
 import 'pages/login_page.dart';
@@ -16,7 +17,7 @@ Future<void> main() async {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              '页面渲染出错\n${details.exception}',
+              tr('页面渲染出错\n{error}', {'error': details.exception}),
               style: const TextStyle(color: Colors.white, fontSize: 12),
               textAlign: TextAlign.center,
             ),
@@ -59,6 +60,11 @@ class _StashScrubberAppState extends State<StashScrubberApp>
     WidgetsBinding.instance.removeObserver(this);
     AppSettings.instance.removeListener(_onSettingsChanged);
     super.dispose();
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    setState(() {});
   }
 
   @override
@@ -138,6 +144,8 @@ class _StashScrubberAppState extends State<StashScrubberApp>
     final home =
         AppSettings.instance.hasProfile ? const HomePage() : const LoginPage();
     return MaterialApp(
+      // 语言切换后整棵界面重建，避免未依赖 Localizations 的页面停留在旧文案
+      key: ValueKey('root-${L10n.effectiveCode}'),
       title: 'Stash',
       debugShowCheckedModeBanner: false,
       navigatorKey: _navKey,
@@ -152,8 +160,9 @@ class _StashScrubberAppState extends State<StashScrubberApp>
       supportedLocales: const [
         Locale('zh', 'CN'),
         Locale('en', 'US'),
+        Locale('ja', 'JP'),
       ],
-      locale: const Locale('zh', 'CN'),
+      locale: L10n.materialLocale,
       routes: {
         '/login': (_) => const LoginPage(),
         '/home': (_) => const HomePage(),

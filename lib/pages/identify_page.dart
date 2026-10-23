@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
+import '../l10n/l10n.dart';
 
 /// 批量识别（Identify）：按刮削源顺序自动匹配短片元数据。
 /// 范围可选全部或指定文件夹；来源多选，顺序即优先级。
@@ -30,7 +31,8 @@ class _IdentifyPageState extends State<IdentifyPage> {
 
   // 识别选项。
   bool _setCover = true;
-  bool _setOrganized = true;
+  // 默认关：本应用把 organized 当「收藏」，开着会让识别成功的短片全进收藏。
+  bool _setOrganized = false;
   bool _skipMultiple = true;
   bool _skipSingleName = true;
 
@@ -92,12 +94,12 @@ class _IdentifyPageState extends State<IdentifyPage> {
   Future<void> _submit() async {
     if (!_hasSource) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请至少选择一个识别来源')));
+           SnackBar(content: Text(tr('请至少选择一个识别来源'))));
       return;
     }
     if (!_scopeAll && _scopePaths.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请选择至少一个文件夹，或改为识别全部')));
+           SnackBar(content: Text(tr('请选择至少一个文件夹，或改为识别全部'))));
       return;
     }
     setState(() => _submitting = true);
@@ -113,13 +115,14 @@ class _IdentifyPageState extends State<IdentifyPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_scopeAll
-            ? '批量识别已提交，全部短片将按所选来源匹配'
-            : '批量识别已提交，共 ${_scopePaths.length} 个文件夹'),
+            ? tr('批量识别已提交，全部短片将按所选来源匹配')
+            : tr('批量识别已提交，共 {count} 个文件夹',
+                {'count': _scopePaths.length})),
       ));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('识别失败：$e')));
+          .showSnackBar(SnackBar(content: Text(tr('识别失败：{error}', {'error': e}))));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -152,7 +155,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Text('选择识别文件夹（可多选）',
+                    child: Text(tr('选择识别文件夹（可多选）'),
                         style: Theme.of(ctx).textTheme.titleMedium),
                   ),
                   Padding(
@@ -161,13 +164,13 @@ class _IdentifyPageState extends State<IdentifyPage> {
                       controller: ctrl,
                       contextMenuBuilder: zhContextMenuBuilder,
                       decoration: InputDecoration(
-                        labelText: '搜索文件夹',
+                        labelText: tr('搜索文件夹'),
                         prefixIcon: Icon(Icons.search, size: 18),
                         isDense: true,
                         suffixIcon: query.isEmpty
                             ? null
                             : IconButton(
-                                tooltip: '清空',
+                                tooltip: tr('清空'),
                                 icon: const Icon(Icons.clear, size: 16),
                                 onPressed: () {
                                   ctrl.clear();
@@ -185,15 +188,15 @@ class _IdentifyPageState extends State<IdentifyPage> {
                       TextButton(
                         onPressed: () =>
                             setSheet(() => sel.addAll(_libraryPaths)),
-                        child: const Text('全选', style: TextStyle(fontSize: 13)),
+                        child:  Text(tr('全选'), style: TextStyle(fontSize: 13)),
                       ),
                       const SizedBox(width: 4),
                       TextButton(
                         onPressed: () => setSheet(() => sel.clear()),
-                        child: const Text('清空', style: TextStyle(fontSize: 13)),
+                        child:  Text(tr('清空'), style: TextStyle(fontSize: 13)),
                       ),
                       const Spacer(),
-                      Text('已选 ${sel.length} 个',
+                      Text(tr('已选 {count} 个', {'count': sel.length}),
                           style: Theme.of(ctx).textTheme.bodySmall),
                     ]),
                   ),
@@ -238,7 +241,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
                         Navigator.pop(ctx);
                       },
                       icon: const Icon(Icons.check, size: 18),
-                      label: Text('确定（${sel.length} 个）'),
+                      label: Text(tr('确定（{count} 个）', {'count': sel.length})),
                     ),
                   ),
                 ],
@@ -264,7 +267,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('批量识别')),
+      appBar: AppBar(title:  Text(tr('批量识别'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -274,14 +277,14 @@ class _IdentifyPageState extends State<IdentifyPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('加载失败：$_error',
+                        Text(tr('加载失败：{error}', {'error': _error}),
                             style: theme.textTheme.bodySmall
                                 ?.copyWith(color: const Color(0xFFE5533D))),
                         const SizedBox(height: 12),
                         FilledButton.icon(
                           onPressed: _load,
                           icon: const Icon(Icons.refresh, size: 18),
-                          label: const Text('重试'),
+                          label:  Text(tr('重试')),
                         ),
                       ],
                     ),
@@ -293,8 +296,8 @@ class _IdentifyPageState extends State<IdentifyPage> {
                     _card(
                       theme,
                       icon: Icons.filter_center_focus_outlined,
-                      title: '识别范围',
-                      subtitle: '按文件名自动匹配元数据；选择文件夹则只识别该目录内的短片。',
+                      title: tr('识别范围'),
+                      subtitle: tr('按文件名自动匹配元数据；选择文件夹则只识别该目录内的短片。'),
                       children: [
                         RadioGroup<bool>(
                           groupValue: _scopeAll,
@@ -305,7 +308,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
                               contentPadding: EdgeInsets.zero,
                               dense: true,
                               value: true,
-                              title: const Text('全部短片',
+                              title:  Text(tr('全部短片'),
                                   style: TextStyle(fontSize: 13)),
                             ),
                             RadioListTile<bool>(
@@ -314,8 +317,8 @@ class _IdentifyPageState extends State<IdentifyPage> {
                               value: false,
                               title: Text(
                                 _scopePaths.isEmpty
-                                    ? '指定文件夹'
-                                    : '指定文件夹（${_scopePaths.length} 个）',
+                                    ? tr('指定文件夹')
+                                    : tr('指定文件夹（{count} 个）', {'count': _scopePaths.length}),
                                 style: const TextStyle(fontSize: 13),
                               ),
                             ),
@@ -331,8 +334,8 @@ class _IdentifyPageState extends State<IdentifyPage> {
                               icon: const Icon(Icons.folder_open, size: 18),
                               label: Text(
                                 _scopePaths.isEmpty
-                                    ? '选择文件夹'
-                                    : '已选 ${_scopePaths.length} 个，点击修改',
+                                    ? tr('选择文件夹')
+                                    : tr('已选 {count} 个，点击修改', {'count': _scopePaths.length}),
                                 style: const TextStyle(fontSize: 13),
                               ),
                             ),
@@ -342,20 +345,20 @@ class _IdentifyPageState extends State<IdentifyPage> {
                     _card(
                       theme,
                       icon: Icons.tune_outlined,
-                      title: '识别来源',
-                      subtitle: '按勾选顺序匹配，第一个命中即采用（可多选）。',
+                      title: tr('识别来源'),
+                      subtitle: tr('按勾选顺序匹配，第一个命中即采用（可多选）。'),
                       children: [
                         if (_scrapers.isEmpty && _stashBoxes.isEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Text('服务器未配置任何刮削器或 Stash-box',
+                            child: Text(tr('服务器未配置任何刮削器或 Stash-box'),
                                 style: theme.textTheme.bodySmall),
                           )
                         else ...[
                           if (_scrapers.isNotEmpty) ...[
                             Padding(
                               padding: const EdgeInsets.only(bottom: 4),
-                              child: Text('刮削器',
+                              child: Text(tr('刮削器'),
                                   style: theme.textTheme.bodySmall
                                       ?.copyWith(
                                           color: theme
@@ -420,7 +423,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
                                 _selectedBoxEndpoints
                                     .addAll(_stashBoxes.map((b) => b.endpoint));
                               }),
-                              child: const Text('全选',
+                              child:  Text(tr('全选'),
                                   style: TextStyle(fontSize: 13)),
                             ),
                             const SizedBox(width: 4),
@@ -429,7 +432,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
                                 _selectedScraperIds.clear();
                                 _selectedBoxEndpoints.clear();
                               }),
-                              child: const Text('清空',
+                              child:  Text(tr('清空'),
                                   style: TextStyle(fontSize: 13)),
                             ),
                           ]),
@@ -439,18 +442,18 @@ class _IdentifyPageState extends State<IdentifyPage> {
                     _card(
                       theme,
                       icon: Icons.settings_outlined,
-                      title: '识别选项',
-                      subtitle: '匹配成功后的默认写入行为。',
+                      title: tr('识别选项'),
+                      subtitle: tr('匹配成功后的默认写入行为。'),
                       children: [
-                        _switch('自动设置封面', _setCover,
+                        _switch(tr('自动设置封面'), _setCover,
                             (v) => setState(() => _setCover = v)),
-                        _switch('标记为已整理', _setOrganized,
+                        _switch(tr('标记为已整理'), _setOrganized,
                             (v) => setState(() => _setOrganized = v),
-                            hint: '识别成功后将短片标记为 organized'),
-                        _switch('跳过多个匹配', _skipMultiple,
+                            hint: tr('识别成功后将短片标记为 organized')),
+                        _switch(tr('跳过多个匹配'), _skipMultiple,
                             (v) => setState(() => _skipMultiple = v),
-                            hint: '多个结果匹配时跳过，避免写错元数据'),
-                        _switch('跳过单名演员', _skipSingleName,
+                            hint: tr('多个结果匹配时跳过，避免写错元数据')),
+                        _switch(tr('跳过单名演员'), _skipSingleName,
                             (v) => setState(() => _skipSingleName = v)),
                         const SizedBox(height: 6),
                         FilledButton.icon(
@@ -464,11 +467,11 @@ class _IdentifyPageState extends State<IdentifyPage> {
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2))
                               : const Icon(Icons.play_arrow, size: 20),
-                          label: Text(_submitting ? '提交中…' : '开始批量识别'),
+                          label: Text(_submitting ? tr('提交中…') : tr('开始批量识别')),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '识别在 Stash 后台任务中运行，提交后可在「Stash 扫描」页的任务列表查看进度。',
+                          tr('识别在 Stash 后台任务中运行，提交后可在「Stash 扫描」页的任务列表查看进度。'),
                           style: theme.textTheme.bodySmall
                               ?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant),

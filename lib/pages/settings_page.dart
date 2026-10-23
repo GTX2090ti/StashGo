@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 
+import '../l10n/l10n.dart';
 import '../settings/app_settings.dart';
 import 'diagnostics_page.dart';
 import 'net_log_page.dart';
@@ -55,7 +56,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _toggleBiometricLock(bool v) async {
     if (v && !_bioAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('此设备不支持生物识别，无法开启面容解锁')),
+         SnackBar(content: Text(tr('此设备不支持生物识别，无法开启面容解锁'))),
       );
       return;
     }
@@ -64,7 +65,7 @@ class _SettingsPageState extends State<SettingsPage> {
       // 开启后立即要求验证一次（首次生效）
       try {
         final ok = await _auth.authenticate(
-          localizedReason: '验证您的身份以启用面容解锁',
+          localizedReason: tr('验证您的身份以启用面容解锁'),
         );
         if (ok) {
           _cfg.markUnlocked();
@@ -79,6 +80,30 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _pickLanguage() async {
+    final selected = await showDialog<AppLanguage>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(tr('语言')),
+        children: [
+          for (final lang in AppLanguage.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, lang),
+              child: Row(
+                children: [
+                  Expanded(child: Text(L10n.languageName(lang))),
+                  if (lang == _cfg.language) const Icon(Icons.check, size: 20),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (selected != null && selected != _cfg.language) {
+      await _cfg.setLanguage(selected);
+    }
+  }
+
   String normalizeLabel(String url) {
     final m = RegExp(r'^https?://').firstMatch(url);
     return m == null ? url : url.substring(m.end);
@@ -90,21 +115,21 @@ class _SettingsPageState extends State<SettingsPage> {
     final body = ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('外观', style: theme.textTheme.titleMedium),
+        Text(tr('外观'), style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         SegmentedButton<Appearance>(
-          segments: const [
+          segments:  [
             ButtonSegment(
                 value: Appearance.system,
-                label: Text('跟随系统'),
+                label: Text(tr('跟随系统')),
                 icon: Icon(Icons.brightness_auto_outlined)),
             ButtonSegment(
                 value: Appearance.light,
-                label: Text('白天'),
+                label: Text(tr('白天')),
                 icon: Icon(Icons.light_mode_outlined)),
             ButtonSegment(
                 value: Appearance.dark,
-                label: Text('黑暗'),
+                label: Text(tr('黑暗')),
                 icon: Icon(Icons.dark_mode_outlined)),
           ],
           selected: {_cfg.appearance},
@@ -112,16 +137,28 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
 
         const SizedBox(height: 24),
-        Text('服务器', style: theme.textTheme.titleMedium),
+        Text(tr('语言'), style: theme.textTheme.titleMedium),
+        const SizedBox(height: 4),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.translate),
+          title:  Text(tr('语言')),
+          subtitle: Text(L10n.languageName(_cfg.language)),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _pickLanguage,
+        ),
+
+        const SizedBox(height: 24),
+        Text(tr('服务器'), style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.dns_outlined),
-          title: const Text('服务器档案 / 生效地址'),
+          title:  Text(tr('服务器档案 / 生效地址')),
           subtitle: Text(
             _cfg.hasProfile
                 ? '${_cfg.currentProfileName} · ${normalizeLabel(_cfg.baseUrl)}'
-                : '尚未配置服务器',
+                : tr('尚未配置服务器'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -133,12 +170,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
 
         const SizedBox(height: 24),
-        Text('浏览', style: theme.textTheme.titleMedium),
+        Text(tr('浏览'), style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.label_outline),
-          title: const Text('标签浏览'),
+          title:  Text(tr('标签浏览')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.push(
             context,
@@ -147,35 +184,35 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
 
         const SizedBox(height: 24),
-        Text('隐私', style: theme.textTheme.titleMedium),
+        Text(tr('隐私'), style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           secondary: const Icon(Icons.visibility_off_outlined),
-          title: const Text('安全模式'),
-          subtitle: const Text('缩略图打码，长按可临时查看'),
+          title:  Text(tr('安全模式')),
+          subtitle:  Text(tr('缩略图打码，长按可临时查看')),
           value: _cfg.safeMode,
           onChanged: (v) => _cfg.setSafeMode(v),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           secondary: const Icon(Icons.face_retouching_natural),
-          title: const Text('面容解锁'),
+          title:  Text(tr('面容解锁')),
           subtitle: Text(
-            _bioAvailable ? '启动 App 与回到前台时需 Face ID / 指纹验证' : '此设备不支持生物识别',
+            _bioAvailable ? tr('启动 App 与回到前台时需 Face ID / 指纹验证') : tr('此设备不支持生物识别'),
           ),
           value: _cfg.biometricLock,
           onChanged: _bioAvailable ? _toggleBiometricLock : null,
         ),
 
         const SizedBox(height: 24),
-        Text('网络', style: theme.textTheme.titleMedium),
+        Text(tr('网络'), style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.document_scanner_outlined),
-          title: const Text('Stash 扫描'),
-          subtitle: const Text('扫描新短片与图片'),
+          title:  Text(tr('Stash 扫描')),
+          subtitle:  Text(tr('扫描新短片与图片')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.push(
             context,
@@ -185,8 +222,8 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.manage_search_outlined),
-          title: const Text('批量识别'),
-          subtitle: const Text('按刮削源自动匹配短片元数据'),
+          title:  Text(tr('批量识别')),
+          subtitle:  Text(tr('按刮削源自动匹配短片元数据')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.push(
             context,
@@ -196,8 +233,8 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.content_copy_outlined),
-          title: const Text('去重'),
-          subtitle: const Text('按相似度查找重复短片并合并'),
+          title:  Text(tr('去重')),
+          subtitle:  Text(tr('按相似度查找重复短片并合并')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.push(
             context,
@@ -207,8 +244,8 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.insights_outlined),
-          title: const Text('统计'),
-          subtitle: const Text('短片/图片/演员/工作室等媒体库汇总'),
+          title:  Text(tr('统计')),
+          subtitle:  Text(tr('短片/图片/演员/工作室等媒体库汇总')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.push(
             context,
@@ -218,8 +255,8 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.extension_outlined),
-          title: const Text('插件'),
-          subtitle: const Text('查看已安装插件及其任务/钩子'),
+          title:  Text(tr('插件')),
+          subtitle:  Text(tr('查看已安装插件及其任务/钩子')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.push(
             context,
@@ -229,8 +266,8 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.download_outlined),
-          title: const Text('削刮器包'),
-          subtitle: const Text('查看已安装削刮器包，从索引源搜索并安装'),
+          title:  Text(tr('削刮器包')),
+          subtitle:  Text(tr('查看已安装削刮器包，从索引源搜索并安装')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.push(
             context,
@@ -240,7 +277,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.network_check),
-          title: const Text('网络诊断'),
+          title:  Text(tr('网络诊断')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.push(
             context,
@@ -250,7 +287,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.article_outlined),
-          title: const Text('网络日志'),
+          title:  Text(tr('网络日志')),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.push(
             context,
@@ -259,13 +296,13 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
 
         const SizedBox(height: 24),
-        Text('关于', style: theme.textTheme.titleMedium),
+        Text(tr('关于'), style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
         Text('Stash 1.6.92', style: theme.textTheme.bodySmall),
         if (!_cfg.storageAvailable)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text('本地存储不可用，设置不会持久化',
+            child: Text(tr('本地存储不可用，设置不会持久化'),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: const Color(0xFFE5533D))),
           ),
@@ -274,6 +311,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     if (widget.embedded) return Scaffold(body: body);
-    return Scaffold(appBar: AppBar(title: const Text('设置')), body: body);
+    return Scaffold(appBar: AppBar(title:  Text(tr('设置'))), body: body);
   }
 }
