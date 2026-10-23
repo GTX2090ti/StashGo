@@ -1,3 +1,7 @@
+# 本地工具链脚本与安装包缓存（沙箱重建用，不入库）
+/.toolchain/cache/
+/.toolchain/*.log
+
 # Miscellaneous
 *.class
 *.log
