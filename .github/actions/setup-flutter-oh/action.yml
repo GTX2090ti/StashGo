@@ -6,6 +6,19 @@ inputs:
     description: Flutter OH 分支
     required: false
     default: oh-3.35.7-release
+  commit:
+    description: 固定提交（flutter_embedding har 必须兼容当前 SDK）
+    required: false
+    # 该提交的 har 版本为 146884d，ets 源码未使用 KeyEvent.isCapsLockOn、
+    # window.getGlobalWindowMode（要求 API > 18），也未使用
+    # autoFillManager.ViewData / requestAutoFill（@since 26），
+    # 已用 API 18 SDK 本地完整构建通过。
+    # 分支后续提交的 har 会引入上述高版本 API，ArkTS 编译报 10505001。
+    default: 22b6118ac46e1fdfdc20f38e39accaaa7b23aeed
+  version:
+    description: 写入版本文件的 SDK 版本（固定提交不在 tag 上，需手工指定）
+    required: false
+    default: 3.35.7+ohos
 
 runs:
   using: composite
@@ -16,6 +29,7 @@ runs:
         set -euo pipefail
         FLUTTER_DIR="$RUNNER_TEMP/flutter-ohos"
         BRANCH="${{ inputs.branch }}"
+        COMMIT="${{ inputs.commit }}"
 
         if [ ! -d "$FLUTTER_DIR/.git" ]; then
           git clone --depth 1 --single-branch -b "$BRANCH" \
@@ -26,6 +40,13 @@ runs:
               https://gitcode.com/CPF-Flutter/flutter_flutter.git "$FLUTTER_DIR"
           }
         fi
+
+        cd "$FLUTTER_DIR"
+        if [ -n "$COMMIT" ]; then
+          git fetch --depth 1 origin "$COMMIT"
+          git checkout -q FETCH_HEAD
+        fi
+        echo "Flutter OH @ $(git log --oneline -1)"
 
         echo "$FLUTTER_DIR/bin" >> "$GITHUB_PATH"
         # ohos 引擎产物（含 Dart SDK）只发布在华为 OBS，保留默认地址即可
@@ -39,3 +60,25 @@ runs:
         export PATH="$RUNNER_TEMP/flutter-ohos/bin:$PATH"
         flutter --version
         flutter config --no-analytics >/dev/null 2>&1 || true
+
+    - name: Pin framework version
+      shell: bash
+      # 固定提交不在任何 tag 上，flutter 会把版本算成 0.0.0-unknown，
+      # 使 pub 的 "flutter: >=3.35.0" 约束解析失败；改写版本文件即可。
+      run: |
+        set -euo pipefail
+        VERSION_FILE="$RUNNER_TEMP/flutter-ohos/bin/cache/flutter.version.json"
+        test -f "$VERSION_FILE"
+        python3 - "$VERSION_FILE" "${{ inputs.version }}" <<'PY'
+        import json
+        import sys
+
+        path, version = sys.argv[1], sys.argv[2]
+        with open(path) as f:
+            data = json.load(f)
+        data['frameworkVersion'] = version
+        data['flutterVersion'] = version
+        with open(path, 'w') as f:
+            json.dump(data, f, indent=2)
+        print('Flutter version pinned to', version)
+        PY

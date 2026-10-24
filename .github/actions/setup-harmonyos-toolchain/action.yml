@@ -5,7 +5,10 @@ inputs:
   tools-version:
     description: Command Line Tools 版本
     required: false
-    default: 6.1.1.280
+    # 5.1.0.840 自带 HarmonyOS 5.1.0 SDK（apiVersion 18），与
+    # ohos/build-profile.json5 的 compatibleSdkVersion "5.1.0(18)" 一致；
+    # 该版本已在本地完整构建出 HAP，云端使用同一版本避免 SDK 版本差异。
+    default: 5.1.0.840
 
 runs:
   using: composite
@@ -25,16 +28,28 @@ runs:
         set -euo pipefail
         TOOLS_DIR="$RUNNER_TEMP/command-line-tools"
         ZIP_PATH="$RUNNER_TEMP/harmonyos-tools.zip"
+        VERSION="${{ inputs.tools-version }}"
+        MIRROR_DIR="$(echo "$VERSION" | cut -d. -f1-3)"
 
         if [ ! -d "$TOOLS_DIR/sdk" ]; then
-          curl -fL --retry 3 --retry-delay 5 \
-            -o "$ZIP_PATH" \
-            "https://libsdl.org/harmonyos-devtools/commandline-tools-linux-x64-${{ inputs.tools-version }}.zip"
+          # 华为云镜像（与本地验证版本一致）优先，libsdl 镜像兜底
+          for URL in \
+            "https://repo.huaweicloud.com/harmonyos/ohpm/$MIRROR_DIR/commandline-tools-linux-x64-$VERSION.zip" \
+            "https://libsdl.org/harmonyos-devtools/commandline-tools-linux-x64-$VERSION.zip"; do
+            echo "downloading $URL"
+            if curl -fL --retry 3 --retry-delay 5 -o "$ZIP_PATH" "$URL"; then
+              break
+            fi
+            rm -f "$ZIP_PATH"
+          done
+          test -f "$ZIP_PATH"
           unzip -q "$ZIP_PATH" -d "$RUNNER_TEMP"
           rm -f "$ZIP_PATH"
         fi
 
         test -d "$TOOLS_DIR/sdk"
+        # SDK 版本必须与 compatibleSdkVersion 匹配，否则 ArkTS 按高版本声明编译会报错
+        echo "SDK: $(cat "$TOOLS_DIR/sdk/default/sdk-pkg.json" | tr -d '\n' | sed 's/  */ /g')"
         echo "DEVECO_SDK_HOME=$TOOLS_DIR/sdk" >> "$GITHUB_ENV"
         echo "HOS_SDK_HOME=$TOOLS_DIR/sdk" >> "$GITHUB_ENV"
         echo "HDC_HOME=$TOOLS_DIR/sdk/default/openharmony/toolchains" >> "$GITHUB_ENV"
@@ -45,6 +60,7 @@ runs:
         set -euo pipefail
         TOOLS_DIR="$RUNNER_TEMP/command-line-tools"
         for dir in bin tool/node/bin tools/node/bin tools/ohpm/bin tools/hvigor/bin \
+                   hvigor/bin ohpm/bin \
                    sdk/default/openharmony/toolchains; do
           if [ -d "$TOOLS_DIR/$dir" ]; then
             echo "$TOOLS_DIR/$dir" >> "$GITHUB_PATH"

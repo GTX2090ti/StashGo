@@ -54,20 +54,6 @@ jobs:
           VERSION=$(sed -n 's/^version: *\([0-9][0-9.]*\).*/\1/p' pubspec.yaml | head -1)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Show SDK info
-        shell: bash
-        run: |
-          SDK="$DEVECO_SDK_HOME/default"
-          ls "$SDK"
-          cat "$SDK/sdk-pkg.json" 2>/dev/null | head -30 || true
-          DTS="$SDK/openharmony/ets/api/@ohos.app.ability.autoFillManager.d.ts"
-          if [ -f "$DTS" ]; then
-            grep -n "ViewData\|AutoFillType\|requestAutoFill" "$DTS" | head -20
-          else
-            echo "missing $DTS"
-            ls "$SDK/openharmony/ets/api" | grep -i autofill || true
-          fi
-
       - name: Get dependencies
         run: flutter pub get
 
