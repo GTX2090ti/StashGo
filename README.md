@@ -87,7 +87,13 @@ flutter pub get
 flutter build ios --release --no-codesign
 ```
 
-**HarmonyOS** —— 本机编译，需要 DevEco Studio 的 OpenHarmony SDK 与 Flutter-OH 工具链。`hvigorw` 的增量判定会在产物齐备时跳过 `flutter assemble`，导致改动的 Dart 不进包，所以先发版走「先 AOT 再打包」两步脚本，而不是直接 `flutter build hap`。
+**HarmonyOS** —— 云端 GitHub Actions（`.github/workflows/hap.yml`）：托管 runner 自动下载 HarmonyOS 命令行工具与 Flutter-OH（`.github/actions/setup-harmonyos-toolchain`、`.github/actions/setup-flutter-oh`），无需自托管机器或本机 DevEco Studio。产物为未签名 HAP（`ohos/build-profile.json5` 未配置签名），装机前需自行签名。
+
+```bash
+flutter build hap --release --no-codesign
+```
+
+本机构建同样需要 DevEco Studio 的 SDK 与 Flutter-OH 工具链。`hvigorw` 的增量判定会在产物齐备时跳过 `flutter assemble`，导致改动的 Dart 不进包，所以先发版走「先 AOT 再打包」两步脚本，而不是直接 `hvigorw assembleHap`。
 
 ```bash
 flutter pub get

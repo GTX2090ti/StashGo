@@ -1,0 +1,78 @@
+name: Setup HarmonyOS toolchain
+description: 下载并配置 HarmonyOS 命令行工具（含 SDK、hvigor、ohpm、node）
+
+inputs:
+  tools-version:
+    description: Command Line Tools 版本
+    required: false
+    default: 6.1.1.280
+
+runs:
+  using: composite
+  steps:
+    - name: Configure npm registry
+      # hvigor 依赖 ~/.npmrc 才能拉取插件依赖
+      shell: bash
+      run: |
+        cat > "$HOME/.npmrc" <<'EOF'
+        registry=https://repo.huaweicloud.com/repository/npm/
+        @ohos:registry=https://repo.harmonyos.com/npm/
+        EOF
+
+    - name: Download and extract Command Line Tools
+      shell: bash
+      run: |
+        set -euo pipefail
+        TOOLS_DIR="$RUNNER_TEMP/command-line-tools"
+        ZIP_PATH="$RUNNER_TEMP/harmonyos-tools.zip"
+
+        if [ ! -d "$TOOLS_DIR/sdk" ]; then
+          curl -fL --retry 3 --retry-delay 5 \
+            -o "$ZIP_PATH" \
+            "https://libsdl.org/harmonyos-devtools/commandline-tools-linux-x64-${{ inputs.tools-version }}.zip"
+          unzip -q "$ZIP_PATH" -d "$RUNNER_TEMP"
+          rm -f "$ZIP_PATH"
+        fi
+
+        test -d "$TOOLS_DIR/sdk"
+        echo "DEVECO_SDK_HOME=$TOOLS_DIR/sdk" >> "$GITHUB_ENV"
+        echo "HOS_SDK_HOME=$TOOLS_DIR/sdk" >> "$GITHUB_ENV"
+        echo "HDC_HOME=$TOOLS_DIR/sdk/default/openharmony/toolchains" >> "$GITHUB_ENV"
+
+    - name: Add toolchain to PATH
+      shell: bash
+      run: |
+        set -euo pipefail
+        TOOLS_DIR="$RUNNER_TEMP/command-line-tools"
+        for dir in bin tool/node/bin tools/node/bin tools/ohpm/bin tools/hvigor/bin \
+                   sdk/default/openharmony/toolchains; do
+          if [ -d "$TOOLS_DIR/$dir" ]; then
+            echo "$TOOLS_DIR/$dir" >> "$GITHUB_PATH"
+          fi
+        done
+
+    - name: Select JDK 17
+      # hvigor / ohpm 需要 JDK 17+，托管 runner 已预装
+      shell: bash
+      run: |
+        set -euo pipefail
+        JAVA_DIR="${JAVA_HOME_17_X64:-}"
+        if [ -n "$JAVA_DIR" ] && [ -d "$JAVA_DIR" ]; then
+          echo "JAVA_HOME=$JAVA_DIR" >> "$GITHUB_ENV"
+          echo "$JAVA_DIR/bin" >> "$GITHUB_PATH"
+        fi
+
+    - name: Install runtime libraries
+      shell: bash
+      run: sudo apt-get update -qq && sudo apt-get install -y -qq libgl1
+
+    - name: Show toolchain versions
+      shell: bash
+      run: |
+        set -uo pipefail
+        TOOLS_DIR="$RUNNER_TEMP/command-line-tools"
+        export PATH="$TOOLS_DIR/bin:$TOOLS_DIR/tool/node/bin:$TOOLS_DIR/tools/node/bin:$PATH"
+        node -v || true
+        ohpm -v || true
+        hvigorw -v || true
+        ls "$TOOLS_DIR/sdk"

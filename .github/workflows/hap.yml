@@ -29,15 +29,21 @@ permissions:
 
 jobs:
   build-hap:
-    # GitHub 托管 runner 没有 DevEco Studio / OpenHarmony SDK / Flutter-OH，
-    # 需要一台装有这些工具链的自托管 runner，并打上 ohos 标签。
-    runs-on: [self-hosted, ohos]
-    timeout-minutes: 60
+    # GitHub 托管 runner + 自动下载 HarmonyOS 命令行工具与 Flutter-OH，
+    # 不再依赖装有 DevEco Studio 的自托管 runner。
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
 
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup HarmonyOS toolchain
+        uses: ./.github/actions/setup-harmonyos-toolchain
+
+      - name: Setup Flutter OH
+        uses: ./.github/actions/setup-flutter-oh
 
       - name: Read version from pubspec
         id: version
@@ -46,25 +52,23 @@ jobs:
           VERSION=$(sed -n 's/^version: *\([0-9][0-9.]*\).*/\1/p' pubspec.yaml | head -1)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Clean stale Flutter artifacts
-        # hvigorw 的增量判定会在产物齐备时跳过 flutter assemble，
-        # 导致改动的 Dart 不进包；清理后再打包可强制重新 AOT。
-        run: flutter clean
-
       - name: Get dependencies
         run: flutter pub get
 
       - name: Build HAP (unsigned)
-        working-directory: ohos
-        run: hvigorw assembleHap -p product=default -p buildMode=release --no-daemon
+        # signingConfigs 为空，必须关闭签名；flutter build hap 会先 flutter assemble
+        # 再调用 hvigorw assembleHap，避免 hvigor 增量判定跳过 Dart 编译。
+        run: |
+          flutter build hap --release --no-codesign \
+            --dart-define=APP_VERSION=${{ steps.version.outputs.version }}
 
       - name: Collect HAP
         id: hap
         shell: bash
         run: |
-          HAP=$(find ohos/entry/build -type f -name '*.hap' | head -1)
+          HAP=$(find build/ohos/hap ohos/entry/build -type f -name '*.hap' 2>/dev/null | head -1)
           if [ -z "$HAP" ]; then
-            echo "未找到 HAP 产物，请检查 hvigorw 输出目录" >&2
+            echo "未找到 HAP 产物，请检查构建日志" >&2
             exit 1
           fi
           OUT="StashScrubber-HarmonyOS-v${{ steps.version.outputs.version }}-unsigned.hap"

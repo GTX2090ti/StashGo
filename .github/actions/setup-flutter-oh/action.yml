@@ -1,0 +1,41 @@
+name: Setup Flutter OH
+description: 克隆并配置 Flutter OH（OpenHarmony 适配版）SDK
+
+inputs:
+  branch:
+    description: Flutter OH 分支
+    required: false
+    default: oh-3.35.7-release
+
+runs:
+  using: composite
+  steps:
+    - name: Clone Flutter OH
+      shell: bash
+      run: |
+        set -euo pipefail
+        FLUTTER_DIR="$RUNNER_TEMP/flutter-ohos"
+        BRANCH="${{ inputs.branch }}"
+
+        if [ ! -d "$FLUTTER_DIR/.git" ]; then
+          git clone --depth 1 --single-branch -b "$BRANCH" \
+            https://atomgit.com/CPF-Flutter/flutter_flutter.git "$FLUTTER_DIR" \
+          || {
+            rm -rf "$FLUTTER_DIR"
+            git clone --depth 1 --single-branch -b "$BRANCH" \
+              https://gitcode.com/CPF-Flutter/flutter_flutter.git "$FLUTTER_DIR"
+          }
+        fi
+
+        echo "$FLUTTER_DIR/bin" >> "$GITHUB_PATH"
+        # ohos 引擎产物（含 Dart SDK）只发布在华为 OBS，保留默认地址即可
+        echo "FLUTTER_OHOS_STORAGE_BASE_URL=https://flutter-ohos.obs.cn-south-1.myhuaweicloud.com" >> "$GITHUB_ENV"
+
+    - name: Bootstrap Flutter OH
+      shell: bash
+      # 首次运行会下载 Dart SDK 与 ohos 引擎产物
+      run: |
+        set -euo pipefail
+        export PATH="$RUNNER_TEMP/flutter-ohos/bin:$PATH"
+        flutter --version
+        flutter config --no-analytics >/dev/null 2>&1 || true
