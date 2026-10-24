@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../l10n/l10n.dart';
@@ -16,6 +17,8 @@ import 'scraper_packages_page.dart';
 
 /// 构建脚本从 pubspec 注入，避免「关于」里的版本号与包内版本脱节。
 const _appVersion = String.fromEnvironment('APP_VERSION');
+
+const _githubRepoUrl = 'https://github.com/GTX2090ti/StashScrubber';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, this.embedded = false});
@@ -110,6 +113,14 @@ class _SettingsPageState extends State<SettingsPage> {
   String normalizeLabel(String url) {
     final m = RegExp(r'^https?://').firstMatch(url);
     return m == null ? url : url.substring(m.end);
+  }
+
+  Future<void> _copyRepoUrl() async {
+    await Clipboard.setData(const ClipboardData(text: _githubRepoUrl));
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(tr('已复制仓库地址'))));
   }
 
   @override
@@ -306,9 +317,23 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 24),
         Text(tr('关于'), style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
-        Text(
-          _appVersion.isEmpty ? 'Stash' : 'Stash $_appVersion',
-          style: theme.textTheme.bodySmall,
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.info_outline),
+          title: Text(tr('版本')),
+          subtitle: Text(_appVersion.isEmpty ? 'Stash' : _appVersion),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.code),
+          title: Text(tr('GitHub 仓库')),
+          subtitle: const Text(
+            _githubRepoUrl,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: const Icon(Icons.copy_all_outlined),
+          onTap: _copyRepoUrl,
         ),
         if (!_cfg.storageAvailable)
           Padding(

@@ -12,6 +12,7 @@ const Map<String, String> enStrings = {
   '{slot}地址': '{slot} address',
   '(未命名)': '(Untitled)',
   'GraphQL 错误': 'GraphQL error',
+  'GitHub 仓库': 'GitHub repository',
   'O 计数': 'O count',
   'O 计数 ≥': 'O count ≥',
   'Stash 任务': 'Stash tasks',
@@ -202,6 +203,7 @@ const Map<String, String> enStrings = {
   '工作室名称不能为空': 'Studio name cannot be empty',
   '工作室详情': 'Studio details',
   '已保存': 'Saved',
+  '已复制仓库地址': 'Repository URL copied',
   '已停用': 'Disabled',
   '已切换到{slot}地址': 'Switched to {slot} address',
   '已删除': 'Deleted',
@@ -431,6 +433,7 @@ const Map<String, String> enStrings = {
   '男性': 'Male',
   '画廊': 'Galleries',
   '白天': 'Light',
+  '版本': 'Version',
   '目标': 'Target',
   '目标站点返回 404（内容不存在或页面已失效），可换削刮器重试':
       'The target site returned 404 (content missing or page expired). Try another scraper.',
