@@ -1,0 +1,85 @@
+name: Build HAP
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 要构建的分支或 tag（留空使用当前分支）
+        required: false
+        type: string
+      upload_to_release:
+        description: 构建成功后上传到 v<版本> Release（覆盖同名资产）
+        required: false
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      ref:
+        description: 要构建的分支或 tag（留空使用当前分支）
+        required: false
+        type: string
+      upload_to_release:
+        description: 构建成功后上传到 v<版本> Release（覆盖同名资产）
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-hap:
+    # GitHub 托管 runner 没有 DevEco Studio / OpenHarmony SDK / Flutter-OH，
+    # 需要一台装有这些工具链的自托管 runner，并打上 ohos 标签。
+    runs-on: [self-hosted, ohos]
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Read version from pubspec
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(sed -n 's/^version: *\([0-9][0-9.]*\).*/\1/p' pubspec.yaml | head -1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Clean stale Flutter artifacts
+        # hvigorw 的增量判定会在产物齐备时跳过 flutter assemble，
+        # 导致改动的 Dart 不进包；清理后再打包可强制重新 AOT。
+        run: flutter clean
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build HAP (unsigned)
+        working-directory: ohos
+        run: hvigorw assembleHap -p product=default -p buildMode=release --no-daemon
+
+      - name: Collect HAP
+        id: hap
+        shell: bash
+        run: |
+          HAP=$(find ohos/entry/build -type f -name '*.hap' | head -1)
+          if [ -z "$HAP" ]; then
+            echo "未找到 HAP 产物，请检查 hvigorw 输出目录" >&2
+            exit 1
+          fi
+          OUT="StashScrubber-HarmonyOS-v${{ steps.version.outputs.version }}-unsigned.hap"
+          cp "$HAP" "$OUT"
+          echo "path=$OUT" >> "$GITHUB_OUTPUT"
+
+      - name: Upload HAP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StashScrubber-HarmonyOS-v${{ steps.version.outputs.version }}-unsigned
+          path: ${{ steps.hap.outputs.path }}
+          if-no-files-found: error
+
+      - name: Upload to GitHub Release
+        if: ${{ inputs.upload_to_release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "v${{ steps.version.outputs.version }}" "${{ steps.hap.outputs.path }}" --clobber
