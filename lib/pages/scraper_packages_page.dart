@@ -7,6 +7,9 @@ import '../models/models.dart';
 import '../widgets/common.dart';
 import '../l10n/l10n.dart';
 
+/// 削刮器包列表排序：更新时间（包索引里的 date）或名称。
+enum _ScraperSort { updated, name }
+
 /// 削刮器包管理页：查看服务器上已安装的包，并从索引源搜索、勾选安装。
 ///
 /// Stash 的安装是后台任务：提交后拿到 job id，轮询队列直到该 id 消失或
@@ -31,6 +34,7 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
   String? _error;
   List<ScraperPkg> _installed = [];
   List<PackageSource> _sources = [];
+  _ScraperSort _sortBy = _ScraperSort.updated;
 
   bool _availBusy = false;
   String? _availError;
@@ -73,11 +77,25 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
                   p.synopsis.toLowerCase().contains(term),
             )
             .toList()
-          ..sort(
-            (a, b) =>
-                a.display.toLowerCase().compareTo(b.display.toLowerCase()),
-          );
+          ..sort(_comparePkg);
     return list;
+  }
+
+  /// 排序：更新时间取包索引里的 date，倒序；空日期排最后；其次按名称升序。
+  int _comparePkg(ScraperPkg a, ScraperPkg b) {
+    if (_sortBy == _ScraperSort.updated) {
+      final da = DateTime.tryParse(a.date);
+      final db = DateTime.tryParse(b.date);
+      if (da != null && db != null) {
+        final byDate = db.compareTo(da);
+        if (byDate != 0) return byDate;
+      } else if (da != null || db != null) {
+        return da != null ? -1 : 1;
+      } else if (a.date != b.date) {
+        return b.date.compareTo(a.date);
+      }
+    }
+    return a.display.toLowerCase().compareTo(b.display.toLowerCase());
   }
 
   Future<void> _load() async {
@@ -313,6 +331,25 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
       appBar: AppBar(
         title:  Text(tr('削刮器包')),
         actions: [
+          PopupMenuButton<_ScraperSort>(
+            tooltip: tr('排序方式'),
+            icon: const Icon(Icons.sort),
+            initialValue: _sortBy,
+            enabled: !_busy && !_installing,
+            onSelected: (v) => setState(() => _sortBy = v),
+            itemBuilder: (_) => [
+              CheckedPopupMenuItem(
+                value: _ScraperSort.updated,
+                checked: _sortBy == _ScraperSort.updated,
+                child:  Text(tr('按更新时间排序')),
+              ),
+              CheckedPopupMenuItem(
+                value: _ScraperSort.name,
+                checked: _sortBy == _ScraperSort.name,
+                child:  Text(tr('按名称排序')),
+              ),
+            ],
+          ),
           IconButton(
             tooltip: tr('重新加载削刮器'),
             icon: const Icon(Icons.sync),
@@ -385,13 +422,14 @@ class _ScraperPackagesPageState extends State<ScraperPackagesPage>
         ),
       );
     }
+    final list = [..._installed]..sort(_comparePkg);
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(
         padding: const EdgeInsets.all(12),
-        itemCount: _installed.length,
+        itemCount: list.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (_, i) => _card(theme, _installed[i]),
+        itemBuilder: (_, i) => _card(theme, list[i]),
       ),
     );
   }

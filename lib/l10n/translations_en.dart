@@ -273,6 +273,8 @@ const Map<String, String> enStrings = {
   '按文件名自动匹配元数据；选择文件夹则只识别该目录内的短片。':
       'Match metadata by file name automatically; selecting folders limits identification to those folders.',
   '按相似度查找重复短片并合并': 'Find and merge duplicate scenes by similarity',
+  '按名称排序': 'Sort by name',
+  '按更新时间排序': 'Sort by update time',
   '按路径规则把演员/工作室/标签自动关联到短片。':
       'Automatically link performers, studios and tags to scenes by path rules.',
   '换削刮器': 'Change scraper',
