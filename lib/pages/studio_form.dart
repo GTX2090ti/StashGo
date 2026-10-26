@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/stash_api.dart';
+import '../api/filter_options_cache.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
@@ -98,9 +99,9 @@ class _StudioFormState extends State<StudioForm> {
           _error = tr('加载失败');
         }
       }
-      final results = await Future.wait([_api.allStudios(), _api.allTags()]);
-      _studios = results[0] as List<Studio>;
-      _tags = results[1] as List<Tag>;
+      final opts = await FilterOptionsCache.load(_api);
+      _studios = opts.studios;
+      _tags = opts.tags;
     } catch (e) {
       _error = tr('加载失败：{error}', {'error': e});
     }

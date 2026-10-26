@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../api/filter_options_cache.dart';
 import '../widgets/common.dart';
 import 'studio_form.dart';
 import '../l10n/l10n.dart';
@@ -17,6 +18,8 @@ class StudioCreatePage extends StatelessWidget {
                 (input['name'] ?? '').toString(),
                 {...input}..remove('name'),
               );
+          // 工作室列表变了，让筛选/选择面板下次重新拉取
+          FilterOptionsCache.invalidate();
           if (ctx.mounted) Navigator.pop(ctx, id);
         },
       );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../api/filter_options_cache.dart';
 import '../models/models.dart';
 import '../tasks/batch_task_center.dart';
 import '../widgets/common.dart';
@@ -541,7 +542,7 @@ class _RelatedScenesState extends State<RelatedScenes> {
 
   Future<void> _openTagSheet(bool add) async {
     try {
-      final tags = await buildApi().allTags();
+      final tags = (await FilterOptionsCache.load(buildApi())).tags;
       if (!mounted) return;
       setState(() => _allTags = tags);
     } catch (_) {
@@ -572,7 +573,7 @@ class _RelatedScenesState extends State<RelatedScenes> {
     if (_selected.isEmpty) return;
     List<Studio> studios;
     try {
-      studios = await buildApi().allStudios();
+      studios = (await FilterOptionsCache.load(buildApi())).studios;
     } catch (e) {
       if (mounted) {
         showToast(context, tr('加载工作室失败：{error}', {'error': e}),
@@ -608,7 +609,7 @@ class _RelatedScenesState extends State<RelatedScenes> {
     if (_selected.isEmpty) return;
     List<Performer> performers;
     try {
-      performers = await buildApi().allPerformers();
+      performers = (await FilterOptionsCache.load(buildApi())).performers;
     } catch (e) {
       if (mounted) {
         showToast(context, tr('加载演员失败：{error}', {'error': e}),
@@ -1006,6 +1007,8 @@ class _PerformerDetailPageState extends State<PerformerDetailPage> {
   void initState() {
     super.initState();
     _load();
+    // 后台预取批量操作面板的选项，点开时无需再等一次请求。
+    FilterOptionsCache.load(buildApi()).ignore();
   }
 
   @override

@@ -1,30 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../api/filter_options_cache.dart';
 import '../api/stash_api.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
 import '../l10n/l10n.dart';
-
-/// 筛选选项（工作室/演员/标签）的进程内缓存：
-/// 反复打开筛选面板时直接复用，跳过整页等待；数据在别处被编辑后最多滞后 2 分钟。
-class _OptionsCache {
-  static const _ttl = Duration(minutes: 2);
-  static FilterOptions? _data;
-  static DateTime? _at;
-
-  static FilterOptions? get fresh {
-    final data = _data;
-    final at = _at;
-    if (data == null || at == null) return null;
-    return DateTime.now().difference(at) <= _ttl ? data : null;
-  }
-
-  static void put(FilterOptions v) {
-    _data = v;
-    _at = DateTime.now();
-  }
-}
 
 /// 完整场景筛选器（对齐 iOS SceneFilterSheet）：
 /// 工作室/演员/标签多选 + 评分/O计数/时长/日期/分辨率 + 已整理 + 仅看封面。
@@ -57,7 +38,7 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
   @override
   void initState() {
     super.initState();
-    final cached = _OptionsCache.fresh;
+    final cached = FilterOptionsCache.peek;
     if (cached != null) {
       _apply(cached);
       _loading = false;
@@ -80,9 +61,8 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
       });
     }
     try {
-      final o = await _api.allFilterOptions();
+      final o = await FilterOptionsCache.load(_api);
       if (!mounted) return;
-      _OptionsCache.put(o);
       setState(() {
         _apply(o);
         _loading = false;

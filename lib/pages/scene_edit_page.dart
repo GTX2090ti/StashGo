@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/stash_api.dart';
+import '../api/filter_options_cache.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
@@ -76,9 +77,10 @@ class _SceneEditPageState extends State<SceneEditPage> {
         _performerIds = s.performers.map((e) => e.id).toSet();
         _tagIds = s.tags.map((e) => e.id).toSet();
       }
-      _studios = await _api.allStudios();
-      _performers = await _api.allPerformers();
-      _tags = await _api.allTags();
+      final opts = await FilterOptionsCache.load(_api);
+      _studios = opts.studios;
+      _performers = opts.performers;
+      _tags = opts.tags;
       _groups = (await _api.findGroups(perPage: 500)).items;
       final members = await _api.sceneGroups([widget.sceneId]);
       final cur = members[widget.sceneId];
@@ -99,12 +101,12 @@ class _SceneEditPageState extends State<SceneEditPage> {
       MaterialPageRoute(builder: (_) => const PerformerCreatePage()),
     );
     if (created == null || !mounted) return;
-    // 重新拉全量并勾选新演员
+    // 重新拉全量并勾选新演员（新建后缓存必须失效，否则拿不到刚建的人）
     try {
-      final list = await _api.allPerformers();
+      final opts = await FilterOptionsCache.reload(_api);
       if (!mounted) return;
       setState(() {
-        _performers = list;
+        _performers = opts.performers;
         _performerIds.add(created);
       });
     } catch (_) {
@@ -135,6 +137,7 @@ class _SceneEditPageState extends State<SceneEditPage> {
       }
       final id = await _api.createStudio(name);
       if (!mounted) return;
+      FilterOptionsCache.invalidate();
       setState(() {
         _studios = [..._studios, Studio(id: id, name: name)];
         _studioId = id;
@@ -171,6 +174,7 @@ class _SceneEditPageState extends State<SceneEditPage> {
       }
       final id = await _api.createTag(name);
       if (!mounted) return;
+      FilterOptionsCache.invalidate();
       setState(() {
         _tags = [..._tags, Tag(id: id, name: name)];
         _tagIds.add(id);

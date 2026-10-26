@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/stash_api.dart';
+import '../api/filter_options_cache.dart';
 import '../models/models.dart';
 import '../settings/app_settings.dart';
 import '../tasks/batch_task_center.dart';
@@ -94,6 +95,13 @@ class _SceneListPageState extends State<SceneListPage> {
     _scroll.addListener(_onScroll);
     BatchTaskCenter.instance.addListener(_onBatchTasks);
     _reload();
+    _warmFilterOptions();
+  }
+
+  /// 后台预取筛选面板 / 批量操作面板的选项，点开时无需再等一次请求。
+  /// 失败无所谓：面板打开时会再拉一次。
+  void _warmFilterOptions() {
+    FilterOptionsCache.load(_api).ignore();
   }
 
   @override
@@ -499,7 +507,7 @@ class _SceneListPageState extends State<SceneListPage> {
 
   Future<void> _openTagSheet(bool add) async {
     try {
-      final tags = await _api.allTags();
+      final tags = (await FilterOptionsCache.load(_api)).tags;
       if (!mounted) return;
       setState(() => _allTags = tags);
     } catch (_) {
@@ -530,7 +538,7 @@ class _SceneListPageState extends State<SceneListPage> {
     if (_selected.isEmpty) return;
     List<Studio> studios;
     try {
-      studios = await _api.allStudios();
+      studios = (await FilterOptionsCache.load(_api)).studios;
     } catch (e) {
       if (mounted)
         showToast(context, tr('加载工作室失败：{error}', {'error': e}), error: true);
@@ -565,7 +573,7 @@ class _SceneListPageState extends State<SceneListPage> {
     if (_selected.isEmpty) return;
     List<Performer> performers;
     try {
-      performers = await _api.allPerformers();
+      performers = (await FilterOptionsCache.load(_api)).performers;
     } catch (e) {
       if (mounted)
         showToast(context, tr('加载演员失败：{error}', {'error': e}), error: true);

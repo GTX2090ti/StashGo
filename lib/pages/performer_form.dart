@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/stash_api.dart';
+import '../api/filter_options_cache.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
@@ -150,7 +151,7 @@ class _PerformerFormState extends State<PerformerForm> {
           _orig = _snapshot();
         }
       }
-      _tags = await _api.allTags();
+      _tags = (await FilterOptionsCache.load(_api)).tags;
     } catch (e) {
       _error = tr('加载失败：{error}', {'error': e});
     }
