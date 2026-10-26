@@ -1,6 +1,8 @@
 name: Build HAP
 
 on:
+  push:
+    branches: [ci-hap]
   workflow_dispatch:
     inputs:
       ref:
