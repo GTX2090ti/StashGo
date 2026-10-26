@@ -352,12 +352,6 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
             ),
           if (s != null)
             IconButton(
-              tooltip: tr('清除全部削刮'),
-              onPressed: _clearBusy ? null : _clearScrape,
-              icon: const Icon(Icons.cleaning_services_outlined),
-            ),
-          if (s != null)
-            IconButton(
               tooltip: tr('标记已看'),
               onPressed: _playBusy ? null : _markPlayed,
               icon: const Icon(Icons.visibility_outlined),
@@ -435,6 +429,18 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                           child: OutlinedButton(
                               onPressed: _openScrape,
                               child:  Text(tr('削刮')))),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: OutlinedButton(
+                              onPressed: _clearBusy ? null : _clearScrape,
+                              style: OutlinedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                              ),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(tr('清除全部削刮')),
+                              ))),
                       const SizedBox(width: 10),
                       Expanded(
                           child: OutlinedButton(
