@@ -61,3 +61,7 @@ ohos/.port_backup/
 ohos/node_modules/
 ohos/local.properties
 ohos/entry/src/main/ets/plugins/GeneratedPluginRegistrant.ets
+
+# 构建产物不入库（走 GitHub Release）
+*.ipa
+*.hap
