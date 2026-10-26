@@ -335,6 +335,27 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
     return norm.length >= 16 ? norm.substring(0, 16) : norm;
   }
 
+  /// 封面角上的快捷操作按钮：半透明黑底 + 白色图标，压在图片上也清晰。
+  Widget _coverAction({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback? onPressed,
+    Color color = Colors.white,
+  }) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Icon(icon, color: color, size: 20),
+      style: IconButton.styleFrom(
+        backgroundColor: Colors.black.withValues(alpha: 0.45),
+        disabledBackgroundColor: Colors.black.withValues(alpha: 0.25),
+        minimumSize: const Size(34, 34),
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -349,19 +370,6 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
               tooltip: tr('生成封面'),
               onPressed: _genBusy ? null : () => _generateCover(),
               icon: const Icon(Icons.image_outlined),
-            ),
-          if (s != null)
-            IconButton(
-              tooltip: tr('标记已看'),
-              onPressed: _playBusy ? null : _markPlayed,
-              icon: const Icon(Icons.visibility_outlined),
-            ),
-          if (s != null)
-            IconButton(
-              tooltip: s.organized ? tr('取消收藏') : tr('收藏'),
-              onPressed: _favBusy ? null : _toggleFavorite,
-              icon: Icon(s.organized ? Icons.star : Icons.star_border,
-                  color: s.organized ? const Color(0xFFFF9F0A) : null),
             ),
         ],
       ),
@@ -407,6 +415,31 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                                 ],
                               ),
                             ),
+                          ),
+                        ),
+                        // 标记已看 / 收藏：压在封面底部两角，避免占用 AppBar
+                        Positioned(
+                          left: 8,
+                          bottom: 8,
+                          child: _coverAction(
+                            icon: Icons.visibility_outlined,
+                            tooltip: tr('标记已看'),
+                            onPressed: _playBusy ? null : _markPlayed,
+                          ),
+                        ),
+                        Positioned(
+                          right: 8,
+                          bottom: 8,
+                          child: _coverAction(
+                            icon: s.organized
+                                ? Icons.star
+                                : Icons.star_border,
+                            tooltip:
+                                s.organized ? tr('取消收藏') : tr('收藏'),
+                            color: s.organized
+                                ? const Color(0xFFFF9F0A)
+                                : Colors.white,
+                            onPressed: _favBusy ? null : _toggleFavorite,
                           ),
                         ),
                       ],
