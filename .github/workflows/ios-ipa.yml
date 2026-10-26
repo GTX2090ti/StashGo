@@ -31,7 +31,7 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS (unsigned)
-        run: flutter build ios --release --no-codesign --dart-define=APP_VERSION=${{ steps.version.outputs.version }}
+        run: flutter -v build ios --release --no-codesign --dart-define=APP_VERSION=${{ steps.version.outputs.version }}
 
       - name: Package IPA
         run: |
