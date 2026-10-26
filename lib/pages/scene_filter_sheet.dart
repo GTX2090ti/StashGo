@@ -1,9 +1,30 @@
 import 'package:flutter/material.dart';
 
+import '../api/stash_api.dart';
 import '../models/models.dart';
 import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
 import '../l10n/l10n.dart';
+
+/// 筛选选项（工作室/演员/标签）的进程内缓存：
+/// 反复打开筛选面板时直接复用，跳过整页等待；数据在别处被编辑后最多滞后 2 分钟。
+class _OptionsCache {
+  static const _ttl = Duration(minutes: 2);
+  static FilterOptions? _data;
+  static DateTime? _at;
+
+  static FilterOptions? get fresh {
+    final data = _data;
+    final at = _at;
+    if (data == null || at == null) return null;
+    return DateTime.now().difference(at) <= _ttl ? data : null;
+  }
+
+  static void put(FilterOptions v) {
+    _data = v;
+    _at = DateTime.now();
+  }
+}
 
 /// 完整场景筛选器（对齐 iOS SceneFilterSheet）：
 /// 工作室/演员/标签多选 + 评分/O计数/时长/日期/分辨率 + 已整理 + 仅看封面。
@@ -23,6 +44,7 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
   List<Performer> _performers = [];
   List<Tag> _tags = [];
   bool _loading = true;
+  String? _error;
 
   /// 各多选区（工作室/演员/标签）的搜索词。
   final Map<String, String> _multiSearch = {};
@@ -35,27 +57,42 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
   @override
   void initState() {
     super.initState();
-    _load();
+    final cached = _OptionsCache.fresh;
+    if (cached != null) {
+      _apply(cached);
+      _loading = false;
+    } else {
+      _load(fromRetry: false);
+    }
   }
 
-  Future<void> _load() async {
-    try {
-      final results = await Future.wait([
-        _api.allStudios(),
-        _api.allPerformers(),
-        _api.allTags(),
-      ]);
-      if (!mounted) return;
+  void _apply(FilterOptions o) {
+    _studios = o.studios;
+    _performers = o.performers;
+    _tags = o.tags;
+  }
+
+  Future<void> _load({bool fromRetry = true}) async {
+    if (fromRetry) {
       setState(() {
-        _studios = results[0] as List<Studio>;
-        _performers = results[1] as List<Performer>;
-        _tags = results[2] as List<Tag>;
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final o = await _api.allFilterOptions();
+      if (!mounted) return;
+      _OptionsCache.put(o);
+      setState(() {
+        _apply(o);
         _loading = false;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _loading = false);
-      showToast(context, tr('加载筛选选项失败：{error}', {'error': e}), error: true);
+      setState(() {
+        _loading = false;
+        _error = '$e';
+      });
     }
   }
 
@@ -108,26 +145,48 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
               style: TextStyle(color: theme.colorScheme.primary)),
       children: [
         _searchField(title),
-        if (shown.isEmpty)
-           Padding(padding: EdgeInsets.all(12), child: Text(tr('（无）'))),
-        for (final it in shown)
-          CheckboxListTile(
-            dense: true,
-            controlAffinity: ListTileControlAffinity.leading,
-            title:
-                Text(label(it), maxLines: 1, overflow: TextOverflow.ellipsis),
-            value: selected.contains(id(it)),
-            onChanged: (v) => setState(() {
-              if (v == true) {
-                if (!selected.contains(id(it))) selected.add(id(it));
-              } else {
-                selected.remove(id(it));
-              }
-            }),
-          ),
+        if (_loading)
+          _loadingRow()
+        else if (shown.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(tr('（无）')),
+          )
+        else
+          for (final it in shown)
+            CheckboxListTile(
+              dense: true,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text(label(it),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              value: selected.contains(id(it)),
+              onChanged: (v) => setState(() {
+                if (v == true) {
+                  if (!selected.contains(id(it))) selected.add(id(it));
+                } else {
+                  selected.remove(id(it));
+                }
+              }),
+            ),
       ],
     );
   }
+
+  /// 该区块自己的加载态，等三份数据回来前也不挡住其它筛选条件。
+  Widget _loadingRow() => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 6, 20, 10),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 8),
+            Text(tr('加载中…'), style: const TextStyle(fontSize: 12)),
+          ],
+        ),
+      );
 
   /// 三个多选区共用的搜索框；改词后把标签 chip 重新从第一批展开。
   Widget _searchField(String title) {
@@ -191,60 +250,65 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
               style: TextStyle(color: theme.colorScheme.primary)),
       children: [
         _searchField('标签'),
-        if (selected.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  for (final t in selected)
-                    InputChip(
-                      label: Text(t.name),
-                      onDeleted: () => setState(() => _f.tags.remove(t.id)),
-                      deleteIcon: const Icon(Icons.close, size: 16),
-                    ),
-                ],
+        if (_loading)
+          _loadingRow()
+        else ...[
+          if (selected.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    for (final t in selected)
+                      InputChip(
+                        label: Text(t.name),
+                        onDeleted: () => setState(() => _f.tags.remove(t.id)),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-        if (rest.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text(tr('（无）')),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 2, 16, 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  for (final t in shown)
-                    FilterChip(
-                      label: Text(t.name),
-                      selected: false,
-                      onSelected: (_) => setState(() => _f.tags.add(t.id)),
-                    ),
-                ],
+          if (rest.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(tr('（无）')),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    for (final t in shown)
+                      FilterChip(
+                        label: Text(t.name),
+                        selected: false,
+                        onSelected: (_) => setState(() => _f.tags.add(t.id)),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-        if (left > 0)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () => setState(() => _tagVisible += 100),
-                child: Text(tr('显示更多（剩余 {count} 项）', {'count': left})),
+          if (left > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => setState(() => _tagVisible += 100),
+                  child:
+                      Text(tr('显示更多（剩余 {count} 项）', {'count': left})),
+                ),
               ),
             ),
-          ),
+        ],
       ],
     );
   }
@@ -277,12 +341,17 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
           ),
           const SizedBox(width: 8),
         ],
+        bottom: _loading
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(2),
+                child: LinearProgressIndicator(minHeight: 2),
+              )
+            : null,
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-          : ListView(
+      body: ListView(
               padding: const EdgeInsets.only(bottom: 24),
               children: [
+                if (_error != null) _errorBar(),
                 _multiSelect<Studio>(
                   title: tr('工作室'),
                   items: _studios,
@@ -407,6 +476,27 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
                 ),
               ],
             ),
+    );
+  }
+
+  /// 拉取失败时面板顶部的提示条，可直接重试，不挡住其余筛选条件。
+  Widget _errorBar() {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, size: 16, color: theme.colorScheme.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              tr('加载筛选选项失败：{error}', {'error': _error}),
+              style: TextStyle(fontSize: 12, color: theme.colorScheme.error),
+            ),
+          ),
+          TextButton(onPressed: () => _load(), child: Text(tr('重试'))),
+        ],
+      ),
     );
   }
 }

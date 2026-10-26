@@ -17,6 +17,19 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// 筛选面板的三份选项（工作室 / 演员 / 标签）。
+class FilterOptions {
+  final List<Studio> studios;
+  final List<Performer> performers;
+  final List<Tag> tags;
+
+  const FilterOptions({
+    required this.studios,
+    required this.performers,
+    required this.tags,
+  });
+}
+
 /// Stash GraphQL 客户端：ApiKey 走请求头（对齐 ArkTS 版 StashAPI）。
 class StashApi {
   StashApi(this.baseUrl, this.apiKey);
@@ -646,6 +659,22 @@ class StashApi {
   Future<List<Tag>> allTags() async {
     final d = await query('query { allTags { id name } }');
     return Tag.listFrom(d?['allTags']);
+  }
+
+  /// 筛选面板一次性取回三份选项：合并成单个 GraphQL 请求，
+  /// 省掉三次单独的握手与排队（标签量往往上万，往返次数影响明显）。
+  Future<FilterOptions> allFilterOptions() async {
+    final d = await query(
+      'query { allStudios { id name } allPerformers { id name } '
+      'allTags { id name } }',
+      null,
+      const Duration(seconds: 20),
+    );
+    return FilterOptions(
+      studios: Studio.listFrom(d?['allStudios']),
+      performers: Performer.listFrom(d?['allPerformers']),
+      tags: Tag.listFrom(d?['allTags']),
+    );
   }
 
   /// 按名称精确查找标签（0.31.1 不允许重名，新建前先查重）。
