@@ -111,7 +111,7 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title:  Text(tr('清除全部削刮')),
+        title:  Text(tr('清除削刮')),
         content: Text(tr(
             '将清空该短片的简介、日期、链接、工作室、演员与标签，并把标题改为文件名「{name}」。\n评分、已看次数与封面不受影响。此操作无法撤销。',
             {'name': name})),
@@ -417,15 +417,25 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                             ),
                           ),
                         ),
-                        // 标记已看 / 收藏：压在封面底部两角，避免占用 AppBar
+                        // 标记已看 / 清除已看 / 收藏：压在封面底部两角，避免占用 AppBar
                         Positioned(
                           left: 8,
                           bottom: 8,
-                          child: _coverAction(
-                            icon: Icons.visibility_outlined,
-                            tooltip: tr('标记已看'),
-                            onPressed: _playBusy ? null : _markPlayed,
-                          ),
+                          child: Row(children: [
+                            _coverAction(
+                              icon: Icons.visibility_outlined,
+                              tooltip: tr('看过'),
+                              onPressed: _playBusy ? null : _markPlayed,
+                            ),
+                            const SizedBox(width: 8),
+                            _coverAction(
+                              icon: Icons.restart_alt,
+                              tooltip: tr('清除已看'),
+                              onPressed: (_playBusy || (s.playCount <= 0))
+                                  ? null
+                                  : _confirmResetPlayed,
+                            ),
+                          ]),
                         ),
                         Positioned(
                           right: 8,
@@ -455,30 +465,61 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                     Row(children: [
                       Expanded(
                           child: OutlinedButton(
-                              onPressed: _openEdit,
-                              child:  Text(tr('编辑')))),
-                      const SizedBox(width: 10),
-                      Expanded(
-                          child: OutlinedButton(
-                              onPressed: _openScrape,
-                              child:  Text(tr('削刮')))),
-                      const SizedBox(width: 10),
-                      Expanded(
-                          child: OutlinedButton(
-                              onPressed: _clearBusy ? null : _clearScrape,
                               style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                              ),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4),
+                                  visualDensity: VisualDensity.compact),
+                              onPressed: _openEdit,
                               child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(tr('清除全部削刮')),
-                              ))),
-                      const SizedBox(width: 10),
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(tr('编辑'),
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      style: const TextStyle(fontSize: 14))))),
+                      const SizedBox(width: 6),
                       Expanded(
                           child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4),
+                                  visualDensity: VisualDensity.compact),
+                              onPressed: _openScrape,
+                              child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(tr('削刮'),
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      style: const TextStyle(fontSize: 14))))),
+                      const SizedBox(width: 6),
+                      Expanded(
+                          child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4),
+                                  visualDensity: VisualDensity.compact),
                               onPressed: _openMerge,
-                              child:  Text(tr('合并')))),
+                              child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(tr('合并'),
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      style: const TextStyle(fontSize: 14))))),
+                      const SizedBox(width: 6),
+                      Expanded(
+                          child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4),
+                                  visualDensity: VisualDensity.compact,
+                                  foregroundColor:
+                                      const Color(0xFFE5533D)),
+                              onPressed: _clearBusy ? null : _clearScrape,
+                              child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(tr('清除'),
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      style: const TextStyle(fontSize: 14))))),
                     ]),
 
                      SectionTitle(tr('基本信息')),
@@ -487,21 +528,6 @@ class _SceneDetailPageState extends State<SceneDetailPage> {
                       InfoRow(tr('评分'), '${(s.rating100 / 20).toStringAsFixed(1)} / 5.0'),
                     InfoRow(tr('O 计数'), '${s.oCounter}'),
                     InfoRow(tr('已看次数'), '${s.playCount}'),
-                    if (s.playCount > 0)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: _playBusy ? null : _confirmResetPlayed,
-                          icon: const Icon(Icons.restart_alt, size: 16),
-                          label: Text(tr('重置已看')),
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size(0, 26),
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 4),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      ),
 
                     if (s.studio != null) ...[
                        SectionTitle(tr('工作室')),
