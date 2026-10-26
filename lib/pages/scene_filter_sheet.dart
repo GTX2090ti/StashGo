@@ -27,6 +27,9 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
   /// 各多选区（工作室/演员/标签）的搜索词。
   final Map<String, String> _multiSearch = {};
 
+  /// 标签 chip 当前展开的数量（标签动辄上百，先显示一批，可继续加载）。
+  int _tagVisible = 100;
+
   final _api = buildApi();
 
   @override
@@ -104,32 +107,7 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
           : Text(tr('已选 {count} 项', {'count': selected.length}),
               style: TextStyle(color: theme.colorScheme.primary)),
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-          child: TextField(
-            contextMenuBuilder: zhContextMenuBuilder,
-            style: const TextStyle(fontSize: 13),
-            decoration: InputDecoration(
-              hintText: tr('搜索{title}', {'title': title}),
-              isDense: true,
-              prefixIcon: const Icon(Icons.search, size: 18),
-              suffixIcon: q.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: tr('清空'),
-                      icon: const Icon(Icons.clear, size: 16),
-                      onPressed: () =>
-                          setState(() => _multiSearch[title] = ''),
-                    ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onChanged: (v) => setState(() => _multiSearch[title] = v),
-          ),
-        ),
+        _searchField(title),
         if (shown.isEmpty)
            Padding(padding: EdgeInsets.all(12), child: Text(tr('（无）'))),
         for (final it in shown)
@@ -146,6 +124,126 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
                 selected.remove(id(it));
               }
             }),
+          ),
+      ],
+    );
+  }
+
+  /// 三个多选区共用的搜索框；改词后把标签 chip 重新从第一批展开。
+  Widget _searchField(String title) {
+    final q = (_multiSearch[title] ?? '').trim();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+      child: TextField(
+        contextMenuBuilder: zhContextMenuBuilder,
+        style: const TextStyle(fontSize: 13),
+        decoration: InputDecoration(
+          hintText: tr('搜索{title}', {'title': title}),
+          isDense: true,
+          prefixIcon: const Icon(Icons.search, size: 18),
+          suffixIcon: q.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: tr('清空'),
+                  icon: const Icon(Icons.clear, size: 16),
+                  onPressed: () => setState(() {
+                    _multiSearch[title] = '';
+                    _tagVisible = 100;
+                  }),
+                ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        onChanged: (v) => setState(() {
+          _multiSearch[title] = v;
+          _tagVisible = 100;
+        }),
+      ),
+    );
+  }
+
+  /// 标签数量通常上百，用 chip 云代替逐行勾选：
+  /// 已选标签固定置顶、可单个移除，其余按名称排序并分批展开。
+  Widget _tagSelect() {
+    final theme = Theme.of(context);
+    final q = (_multiSearch['标签'] ?? '').trim().toLowerCase();
+    int byName(Tag a, Tag b) =>
+        a.name.toLowerCase().compareTo(b.name.toLowerCase());
+
+    final selected = _tags
+        .where((t) => _f.tags.contains(t.id))
+        .toList()
+      ..sort(byName);
+    final rest = _tags
+        .where((t) => !_f.tags.contains(t.id))
+        .where((t) => q.isEmpty || t.name.toLowerCase().contains(q))
+        .toList()
+      ..sort(byName);
+    final shown = rest.take(_tagVisible).toList();
+    final left = rest.length - shown.length;
+
+    return ExpansionTile(
+      title: Text(tr('标签')),
+      subtitle: selected.isEmpty
+          ? null
+          : Text(tr('已选 {count} 项', {'count': selected.length}),
+              style: TextStyle(color: theme.colorScheme.primary)),
+      children: [
+        _searchField('标签'),
+        if (selected.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  for (final t in selected)
+                    InputChip(
+                      label: Text(t.name),
+                      onDeleted: () => setState(() => _f.tags.remove(t.id)),
+                      deleteIcon: const Icon(Icons.close, size: 16),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        if (rest.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(tr('（无）')),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  for (final t in shown)
+                    FilterChip(
+                      label: Text(t.name),
+                      selected: false,
+                      onSelected: (_) => setState(() => _f.tags.add(t.id)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        if (left > 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => setState(() => _tagVisible += 100),
+                child: Text(tr('显示更多（剩余 {count} 项）', {'count': left})),
+              ),
+            ),
           ),
       ],
     );
@@ -199,13 +297,7 @@ class _SceneFilterSheetState extends State<SceneFilterSheet> {
                   label: (p) => p.name,
                   id: (p) => p.id,
                 ),
-                _multiSelect<Tag>(
-                  title: tr('标签'),
-                  items: _tags,
-                  selected: _f.tags,
-                  label: (t) => t.name,
-                  id: (t) => t.id,
-                ),
+                _tagSelect(),
                 const Divider(height: 1),
                 Padding(
                   padding: const EdgeInsets.all(16),

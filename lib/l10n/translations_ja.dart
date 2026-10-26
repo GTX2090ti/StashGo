@@ -597,6 +597,7 @@ const Map<String, String> jaStrings = {
   '工作室已存在，已选中：{name}': 'スタジオは既に存在します。選択済み：{name}',
   '标签已存在，已选中：{name}': 'タグは既に存在します。選択済み：{name}',
   '已选 {count} 项': '{count} 件選択中',
+  '显示更多（剩余 {count} 项）': 'さらに表示（残り {count} 件）',
   '筛选 ({count})': 'フィルター（{count}）',
   '已收藏 {count} 个': 'お気に入りに追加 {count} 件',
   '已取消收藏 {count} 个': 'お気に入りから削除 {count} 件',

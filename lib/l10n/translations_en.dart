@@ -633,6 +633,7 @@ const Map<String, String> enStrings = {
   '工作室已存在，已选中：{name}': 'Studio already exists; selected: {name}',
   '标签已存在，已选中：{name}': 'Tag already exists; selected: {name}',
   '已选 {count} 项': '{count} selected',
+  '显示更多（剩余 {count} 项）': 'Show more ({count} left)',
   '筛选 ({count})': 'Filter ({count})',
   '已收藏 {count} 个': 'Favorited {count}',
   '已取消收藏 {count} 个': 'Unfavorited {count}',
