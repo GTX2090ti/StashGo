@@ -485,41 +485,45 @@ class SceneListCard extends StatelessWidget {
                   aspectRatio: 16 / 9,
                   child: AuthImage(rawPath: rawCover, radius: 0),
                 ),
-                if (res.isNotEmpty)
+                if (res.isNotEmpty || hasCaption)
                   Positioned(
                     left: 6,
                     top: 6,
-                    child: _badge(res,
-                        bg: const Color(0xFF3D7EFF)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (res.isNotEmpty)
+                          _badge(res, bg: const Color(0xFF3D7EFF)),
+                        if (res.isNotEmpty && hasCaption)
+                          const SizedBox(width: 4),
+                        if (hasCaption)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.62),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.subtitles,
+                                    size: 12, color: Colors.white),
+                                const SizedBox(width: 2),
+                                Text(tr('字幕'),
+                                    style: const TextStyle(
+                                        fontSize: 10, color: Colors.white)),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 if (dur.isNotEmpty)
                   Positioned(
                     right: 6,
                     bottom: 6,
                     child: _badge(dur, bg: Colors.black.withValues(alpha: 0.62)),
-                  ),
-                if (hasCaption)
-                  Positioned(
-                    left: 6,
-                    bottom: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.62),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child:  Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.subtitles,
-                                size: 12, color: Colors.white),
-                            SizedBox(width: 2),
-                            Text(tr('字幕'),
-                                style: TextStyle(
-                                    fontSize: 10, color: Colors.white)),
-                          ]),
-                    ),
                   ),
                 if (organized)
                   Positioned(
