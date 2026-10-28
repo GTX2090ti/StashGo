@@ -1,6 +1,6 @@
-# StashScrubber iOS 构建说明（iOS Build Guide）
+# StashGo iOS 构建说明（iOS Build Guide）
 
-本工程为 StashScrubber 的 Flutter 跨平台源码（iOS / HarmonyOS 双平台）。以下为 iOS 构建步骤。
+本工程为 StashGo 的 Flutter 跨平台源码（iOS / HarmonyOS 双平台）。以下为 iOS 构建步骤。
 
 ## 1. 前置条件（在 Mac 上）
 
@@ -61,7 +61,7 @@ open ios/Runner.xcworkspace
 
 ## 6. App 图标
 
-图标位于 `ios/Runner/Assets.xcassets/AppIcon.appiconset/`，当前为默认生成的 StashScrubber（SS）图标。
+图标位于 `ios/Runner/Assets.xcassets/AppIcon.appiconset/`，当前为默认生成的 StashScrubber（SS）图标（应用名已改为 StashGo）。
 替换方法：用 1024×1024 PNG 覆盖 `Icon-App-1024x1024@1x.png`，在 Xcode 中右键 AppIcon → "App 图标源" 选 Assets，或直接用 Xcode 的 AppIcon 编辑器拖入各尺寸。
 
 ## 7. 网络权限说明（已配置）

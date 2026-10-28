@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../settings/app_settings.dart';
+import '../settings/secure_store.dart';
 import '../widgets/common.dart';
 import 'login_page.dart';
 import '../l10n/l10n.dart';
@@ -138,6 +139,26 @@ class _ServerSettingsPageState extends State<ServerSettingsPage> {
             icon: const Icon(Icons.add),
             label:  Text(tr('添加 / 编辑连接')),
           ),
+          if (!SecureStore.instance.isSecure) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline,
+                    size: 14, color: Theme.of(context).colorScheme.outline),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    tr('本设备未提供系统密钥库，ApiKey 保存在应用私有存储中。'),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
 
           const Divider(height: 24),
           for (final slot in AddrSlot.values)

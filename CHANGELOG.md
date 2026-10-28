@@ -1,6 +1,6 @@
 # 更新日志
 
-StashScrubber 全部版本改动记录，倒序排列（最新在最前）。安装包与原始发布说明见 [Releases](https://github.com/GTX2090ti/StashScrubber/releases)，功能总览见 [README](README.md)。
+StashGo 全部版本改动记录，倒序排列（最新在最前）。安装包与原始发布说明见 [Releases](https://github.com/GTX2090ti/StashGo/releases)，功能总览见 [README](README.md)。
 
 - 版本号规则：iOS 与 HarmonyOS 共用同一个 build number，两端同增。
 - 时间取该版本提交 / 发布时间（`YYYY-MM-DD`）；早期若干版本未单独打 tag，标记为 `—`。

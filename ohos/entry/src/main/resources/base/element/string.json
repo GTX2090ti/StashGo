@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "StashScrubber 主模块"
+      "value": "StashGo 主模块"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "StashScrubber 入口"
+      "value": "StashGo 入口"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Stash"
+      "value": "StashGo"
     }
   ]
 }

@@ -30,6 +30,7 @@ const Map<String, String> enStrings = {
   '上一页': 'Previous',
   '上级工作室': 'Parent studio',
   '下一页': 'Next',
+  '下载链接已复制': 'Download link copied',
   '不可达': 'Unreachable',
   '不限': 'Any',
   '为已有媒体按类别生成封面/视频预览等（适合升级后补充素材）。':
@@ -316,6 +317,7 @@ const Map<String, String> enStrings = {
   '日期（yyyy-MM-dd）': 'Date (yyyy-MM-dd)',
   '时长 ≥（分钟）': 'Duration ≥ (minutes)',
   '时长差（秒）': 'Duration difference (seconds)',
+  '暂无发布版本': 'No releases yet',
   '暂无任务': 'No tasks',
   '暂无相关短片': 'No related scenes',
   '暂无网络日志': 'No network logs',
@@ -349,6 +351,7 @@ const Map<String, String> enStrings = {
       'The local performer has no name, so Stash-box cannot be searched by name',
   '查找重复短片': 'Find duplicate scenes',
   '查看': 'View',
+  '查看历史版本与下载': 'Version history & downloads',
   '查看已安装削刮器包，从索引源搜索并安装':
       'View installed scraper packages and install from index sources',
   '查看已安装插件及其任务/钩子': 'View installed plugins and their tasks/hooks',
@@ -436,6 +439,7 @@ const Map<String, String> enStrings = {
   '画廊': 'Galleries',
   '白天': 'Light',
   '版本': 'Version',
+  '版本发布': 'Releases',
   '目标': 'Target',
   '目标站点返回 404（内容不存在或页面已失效），可换削刮器重试':
       'The target site returned 404 (content missing or page expired). Try another scraper.',

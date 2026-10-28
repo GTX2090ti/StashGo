@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/stash_api.dart';
 import '../models/models.dart';
 import '../settings/app_settings.dart';
+import '../widgets/common.dart';
 import '../widgets/zh_toolbar.dart';
 import '../l10n/l10n.dart';
 
@@ -29,6 +30,9 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
+    // 地址一变就重算明文传输告警
+    _lanCtrl.addListener(_onAddrChanged);
+    _wanCtrl.addListener(_onAddrChanged);
     final p = AppSettings.instance.currentProfile;
     if (p != null) {
       _nameCtrl.text = p.name;
@@ -40,8 +44,18 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  void _onAddrChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// 任一地址为「明文 + 非局域网」时要提示 ApiKey 泄露风险。
+  bool get _insecure =>
+      isInsecureTransport(_lanCtrl.text) || isInsecureTransport(_wanCtrl.text);
+
   @override
   void dispose() {
+    _lanCtrl.removeListener(_onAddrChanged);
+    _wanCtrl.removeListener(_onAddrChanged);
     _nameCtrl.dispose();
     _lanCtrl.dispose();
     _wanCtrl.dispose();
@@ -175,6 +189,25 @@ class _LoginPageState extends State<LoginPage> {
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
+                if (_insecure) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          size: 16, color: Color(0xFFE5A03D)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          tr('该地址不走 HTTPS 且不在局域网内：ApiKey 会以明文随请求发送，'
+                              '可能被中间人截获。建议改用 https，或只在内网填该地址。'),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: const Color(0xFFE5A03D)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 20),
                 Row(children: [
                   Expanded(

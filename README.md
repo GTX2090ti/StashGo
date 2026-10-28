@@ -1,6 +1,6 @@
-# Stash（iOS / HarmonyOS 双端）
+# StashGo（iOS / HarmonyOS 双端）
 
-Stash 媒体库的 Flutter 客户端，兼容 **Stash 0.31.x**。一套 Dart 源码同时构建 **iOS** 与 **HarmonyOS NEXT** 两端。
+StashGo 是面向 Stash 媒体库的 Flutter 客户端，兼容 **Stash 0.31.x**。一套 Dart 源码同时构建 **iOS** 与 **HarmonyOS NEXT** 两端。
 
 [English Readme](README_EN.md) | [更新日志 CHANGELOG](CHANGELOG.md) | [iOS 构建说明（中文）](BUILD_IOS_ZH.md) | [iOS Build Guide (EN)](BUILD_IOS_EN.md) —— 安装包在本仓库的 Releases 页下载（iOS 传 IPA、鸿蒙传 HAP，同一 tag）
 
@@ -78,7 +78,7 @@ Stash 媒体库的 Flutter 客户端，兼容 **Stash 0.31.x**。一套 Dart 源
 
 两端构建通道不同，源码同一份。
 
-产物命名统一为 `StashScrubber-<iOS|HarmonyOS>-v<版本>-<unsigned|signed>.<ipa|hap>`（如 `StashScrubber-iOS-v1.6.92-unsigned.ipa`、`StashScrubber-HarmonyOS-v1.6.92-signed.hap`），Release 附件与归档目录 `archive/{ipa,hap}` 都用这个名字。
+产物命名统一为 `StashGo-<iOS|HarmonyOS>-v<版本>-<unsigned|signed>.<ipa|hap>`（如 `StashGo-iOS-v1.6.92-unsigned.ipa`、`StashGo-HarmonyOS-v1.6.92-signed.hap`），Release 附件与归档目录 `archive/{ipa,hap}` 都用这个名字；改名前的历史附件仍用旧的 `StashScrubber-*` 名称。
 
 **iOS** —— 云端 Codemagic（`codemagic.yaml`，`flutter: stable` / `xcode: latest`）。推送 `main` **不会**自动触发构建，需在面板手动触发并轮询。产物为未签名 IPA，本地构建与自签步骤见 [BUILD_IOS_ZH.md](BUILD_IOS_ZH.md)。
 
@@ -108,12 +108,12 @@ cd ohos && hvigorw assembleHap -p product=default -p buildMode=release
 **HarmonyOS**：需要 HarmonyOS NEXT（API 18+）。
 
 ```bash
-hdc install -r StashScrubber-HarmonyOS-vX.Y.Z-signed.hap     # 覆盖安装保留数据
+hdc install -r StashGo-HarmonyOS-vX.Y.Z-signed.hap     # 覆盖安装保留数据
 ```
 
 ## 版本历史
 
-完整改动记录（按版本倒序，含日期与逐条说明）见 **[CHANGELOG.md](CHANGELOG.md)**；各版本安装包与原始发布说明见 [Releases](https://github.com/GTX2090ti/StashScrubber/releases)。
+完整改动记录（按版本倒序，含日期与逐条说明）见 **[CHANGELOG.md](CHANGELOG.md)**；各版本安装包与原始发布说明见 [Releases](https://github.com/GTX2090ti/StashGo/releases)。
 
 - 最新版 **v1.6.96**（2026-10-23）：三语界面、集合浏览、后台批量任务、削刮写回健壮性。
 - 版本号规则：iOS 与 HarmonyOS 共用同一个 build number，两端同增。

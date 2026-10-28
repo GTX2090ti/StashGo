@@ -1,6 +1,6 @@
-# StashScrubber iOS Build Guide
+# StashGo iOS Build Guide
 
-This project is the cross-platform Flutter source (iOS / HarmonyOS) of StashScrubber.
+This project is the cross-platform Flutter source (iOS / HarmonyOS) of StashGo.
 Below are the steps to build the iOS version on a Mac.
 
 ## 1. Prerequisites (on macOS)
@@ -64,7 +64,7 @@ Note: **pushing `main` does not trigger a build** — trigger it from the dashbo
 ## 6. App icon
 
 Icons live in `ios/Runner/Assets.xcassets/AppIcon.appiconset/` (currently a generated
-StashScrubber "SS" icon). To replace: overwrite `Icon-App-1024x1024@1x.png` with your
+StashScrubber "SS" icon; the app name is now StashGo). To replace: overwrite `Icon-App-1024x1024@1x.png` with your
 1024×1024 PNG and let Xcode regenerate, or drag each size into the AppIcon editor in Xcode.
 
 ## 7. Network permissions (already configured)

@@ -14,6 +14,35 @@ import '../l10n/l10n.dart';
 StashApi buildApi() =>
     StashApi(AppSettings.instance.baseUrl, AppSettings.instance.apiKey);
 
+/// 地址是否为「明文 HTTP 且非私有网段」。
+/// ApiKey 走请求头，这类地址下它会以明文过网，中间人 / 伪热点可直接读走。
+/// 局域网内的 http 视为可接受（Stash 自建场景的常态）。
+bool isInsecureTransport(String base) {
+  var s = base.trim();
+  if (s.isEmpty) return false;
+  if (!s.contains('://')) s = 'http://$s';
+  final uri = Uri.tryParse(s);
+  if (uri == null || uri.host.isEmpty) return false;
+  if (uri.scheme == 'https') return false;
+  return !_isPrivateHost(uri.host);
+}
+
+bool _isPrivateHost(String host) {
+  final h = host.toLowerCase();
+  if (h == 'localhost' || h == '127.0.0.1' || h == '[::1]') return true;
+  if (h.endsWith('.local') || h.endsWith('.lan')) return true;
+  final p = h.split('.');
+  if (p.length != 4) return false;
+  final a = int.tryParse(p[0]);
+  final b = int.tryParse(p[1]);
+  if (a == null || b == null) return false;
+  if (a == 10 || a == 127) return true;
+  if (a == 192 && b == 168) return true;
+  if (a == 172 && b >= 16 && b <= 31) return true;
+  if (a == 169 && b == 254) return true;
+  return false;
+}
+
 /// 日期输入格式化：只保留数字并自动按 YYYY-MM-DD 插入连字符，
 /// 用户无需手动输入 "-"，输入 20261003 即显示 2026-10-03。
 class DateDashInputFormatter extends TextInputFormatter {
@@ -281,17 +310,19 @@ class _AuthImageState extends State<AuthImage> {
           builder: (context, _) {
             final safe = AppSettings.instance.safeMode;
             if (!safe || _revealed) return child;
+            // 只渲染模糊后的图，不要在原图上面叠模糊层：
+            // 叠加时底层是清晰原图，模糊层边缘(或半透明像素)会漏出真实内容。
             return GestureDetector(
               onLongPress: _reveal,
               child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  child,
-                  Positioned.fill(
-                    child: ImageFiltered(
-                      imageFilter: ImageFilter.blur(
-                          sigmaX: 14, sigmaY: 14, tileMode: TileMode.clamp),
-                      child: child,
-                    ),
+                  // 不透明底：blur 用 decal 时边缘会透明，露底色而非下层内容
+                  ColoredBox(color: theme.colorScheme.surfaceContainerHighest),
+                  ImageFiltered(
+                    imageFilter: ImageFilter.blur(
+                        sigmaX: 18, sigmaY: 18, tileMode: TileMode.decal),
+                    child: child,
                   ),
                   Positioned(
                     right: 6,

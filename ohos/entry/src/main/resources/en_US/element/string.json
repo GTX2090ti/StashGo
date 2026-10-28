@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "StashScrubber module"
+      "value": "StashGo module"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "StashScrubber entry"
+      "value": "StashGo entry"
     },
     {
       "name": "EntryAbility_label",
-      "value": "Stash"
+      "value": "StashGo"
     }
   ]
 }

@@ -31,7 +31,7 @@ workflows:
           APP=$(ls -d *.app | head -1)
           echo "Found app bundle: $APP"
           mkdir -p Payload
-          cp -R "$APP" "Payload/StashScrubber.app"
-          zip -r ../../../StashScrubber-unsigned.ipa Payload
+          cp -R "$APP" "Payload/StashGo.app"
+          zip -r ../../../StashGo-unsigned.ipa Payload
     artifacts:
-      - StashScrubber-unsigned.ipa
+      - StashGo-unsigned.ipa

@@ -73,14 +73,14 @@ jobs:
             echo "未找到 HAP 产物，请检查构建日志" >&2
             exit 1
           fi
-          OUT="StashScrubber-HarmonyOS-v${{ steps.version.outputs.version }}-unsigned.hap"
+          OUT="StashGo-HarmonyOS-v${{ steps.version.outputs.version }}-unsigned.hap"
           cp "$HAP" "$OUT"
           echo "path=$OUT" >> "$GITHUB_OUTPUT"
 
       - name: Upload HAP artifact
         uses: actions/upload-artifact@v4
         with:
-          name: StashScrubber-HarmonyOS-v${{ steps.version.outputs.version }}-unsigned
+          name: StashGo-HarmonyOS-v${{ steps.version.outputs.version }}-unsigned
           path: ${{ steps.hap.outputs.path }}
           if-no-files-found: error
 

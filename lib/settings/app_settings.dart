@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/l10n.dart';
 import '../models/models.dart';
+import 'secure_store.dart';
 
 enum Appearance { system, light, dark }
 
@@ -34,7 +35,7 @@ class Profile {
         'name': name,
         'lanUrl': lanUrl,
         'wanUrl': wanUrl,
-        'apiKey': apiKey,
+        // apiKey 不进 SharedPreferences（明文 plist），单独存 SecureStore
       };
 
   factory Profile.fromJson(Map<String, dynamic> j) => Profile(
@@ -167,6 +168,28 @@ class AppSettings extends ChangeNotifier {
           currentProfileName = profiles.first.name;
         }
       }
+      // ApiKey 改由 SecureStore 承载：旧版明文迁入安全存储，随后重写一次
+      // profiles，把 SharedPreferences 里的明文抹掉。
+      var needRewrite = false;
+      await Future.wait(profiles.map((prof) async {
+        if (prof.apiKey.isNotEmpty) {
+          await SecureStore.instance.write(prof.name, prof.apiKey);
+          needRewrite = true;
+        } else {
+          final k = await SecureStore.instance.read(prof.name);
+          if (k != null && k.isNotEmpty) prof.apiKey = k;
+        }
+      }));
+      if (p.containsKey(_kApiKey)) {
+        await p.remove(_kApiKey);
+        needRewrite = true;
+      }
+      if (needRewrite) {
+        await p.setString(
+          _kProfiles,
+          jsonEncode(profiles.map((e) => e.toJson()).toList()),
+        );
+      }
       final cur = p.getString(_kCurrent) ?? '';
       if (cur.isNotEmpty && profiles.any((e) => e.name == cur)) {
         currentProfileName = cur;
@@ -243,6 +266,10 @@ class AppSettings extends ChangeNotifier {
       profiles.add(p);
     }
     currentProfileName = p.name;
+    // apiKey 不落 SharedPreferences，单独写安全存储
+    if (p.apiKey.isNotEmpty) {
+      await SecureStore.instance.write(p.name, p.apiKey);
+    }
     await _flush();
   }
 
@@ -251,6 +278,7 @@ class AppSettings extends ChangeNotifier {
     if (currentProfileName == name) {
       currentProfileName = profiles.isEmpty ? '' : profiles.first.name;
     }
+    await SecureStore.instance.delete(name);
     await _flush();
   }
 

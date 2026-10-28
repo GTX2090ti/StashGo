@@ -13,12 +13,13 @@ import 'duplicate_page.dart';
 import 'tags_page.dart';
 import 'stats_page.dart';
 import 'plugins_page.dart';
+import 'releases_page.dart';
 import 'scraper_packages_page.dart';
 
 /// 构建脚本从 pubspec 注入，避免「关于」里的版本号与包内版本脱节。
 const _appVersion = String.fromEnvironment('APP_VERSION');
 
-const _githubRepoUrl = 'https://github.com/GTX2090ti/StashScrubber';
+const _githubRepoUrl = 'https://github.com/GTX2090ti/StashGo';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, this.embedded = false});
@@ -321,7 +322,7 @@ class _SettingsPageState extends State<SettingsPage> {
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.info_outline),
           title: Text(tr('版本')),
-          subtitle: Text(_appVersion.isEmpty ? 'Stash' : _appVersion),
+          subtitle: Text(_appVersion.isEmpty ? 'StashGo' : _appVersion),
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
@@ -334,6 +335,17 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           trailing: const Icon(Icons.copy_all_outlined),
           onTap: _copyRepoUrl,
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.rocket_launch_outlined),
+          title: Text(tr('版本发布')),
+          subtitle: Text(tr('查看历史版本与下载')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ReleasesPage()),
+          ),
         ),
         if (!_cfg.storageAvailable)
           Padding(

@@ -1,6 +1,6 @@
-# Stash (iOS / HarmonyOS)
+# StashGo (iOS / HarmonyOS)
 
-A Flutter client for the [Stash](https://github.com/stashapp/stash) media manager, compatible with **Stash 0.31.x**. One Dart codebase builds both the **iOS** and **HarmonyOS NEXT** apps.
+StashGo is a Flutter client for the [Stash](https://github.com/stashapp/stash) media manager, compatible with **Stash 0.31.x**. One Dart codebase builds both the **iOS** and **HarmonyOS NEXT** apps.
 
 [中文说明](README.md) | [iOS 构建说明（中文）](BUILD_IOS_ZH.md) | [iOS Build Guide (EN)](BUILD_IOS_EN.md) — binaries are attached to this repository's Releases (IPA for iOS, HAP for HarmonyOS, under the same tag)
 
@@ -78,7 +78,7 @@ From v1.6.90 both platforms live in this single repository. Before the merge iOS
 
 Same source, two channels.
 
-Artifact names follow one rule: `StashScrubber-<iOS|HarmonyOS>-v<version>-<unsigned|signed>.<ipa|hap>` (e.g. `StashScrubber-iOS-v1.6.92-unsigned.ipa`, `StashScrubber-HarmonyOS-v1.6.92-signed.hap`) — the same name is used for Release assets and in the local `archive/{ipa,hap}` folders.
+Artifact names follow one rule: `StashGo-<iOS|HarmonyOS>-v<version>-<unsigned|signed>.<ipa|hap>` (e.g. `StashGo-iOS-v1.6.92-unsigned.ipa`, `StashGo-HarmonyOS-v1.6.92-signed.hap`) — the same name is used for Release assets and in the local `archive/{ipa,hap}` folders. Historical assets uploaded before the rename keep the old `StashScrubber-*` names.
 
 **iOS** — Codemagic in the cloud (`codemagic.yaml`, `flutter: stable` / `xcode: latest`). Pushing `main` does **not** trigger a build; trigger it from the dashboard and poll that build id. The artifact is an unsigned IPA. For local builds and re-signing see [BUILD_IOS_EN.md](BUILD_IOS_EN.md).
 
@@ -102,7 +102,7 @@ cd ohos && hvigorw assembleHap -p product=default -p buildMode=release
 **HarmonyOS**: requires HarmonyOS NEXT (API 18+).
 
 ```bash
-hdc install -r StashScrubber-HarmonyOS-vX.Y.Z-signed.hap     # overwrite install keeps your data
+hdc install -r StashGo-HarmonyOS-vX.Y.Z-signed.hap     # overwrite install keeps your data
 ```
 
 ## Changelog

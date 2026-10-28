@@ -21,7 +21,6 @@ class _LockPageState extends State<LockPage> {
   bool _checking = false;
   bool _hasBiometrics = false;
   String _status = '';
-  bool _firstTry = true;
 
   @override
   void initState() {
@@ -71,7 +70,6 @@ class _LockPageState extends State<LockPage> {
       } else {
         setState(() {
           _checking = false;
-          _firstTry = false;
           _status = tr('验证失败，请重试');
         });
       }
@@ -79,10 +77,41 @@ class _LockPageState extends State<LockPage> {
       if (!mounted) return;
       setState(() {
         _checking = false;
-        _firstTry = false;
         _status = tr('无法使用生物识别：{error}', {'error': e});
       });
     }
+  }
+
+  /// 解困出口：设备没有可用生物识别（或权限被拒）时，锁屏页原本既不能后退
+  /// 也进不了设置，用户只能重装。这里给一条需要二次确认的降级路径。
+  Future<void> _disableLockAndEnter() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr('无法验证身份？')),
+        content: Text(
+          tr('继续将关闭面容解锁保护并直接进入应用，下次启动不再要求验证。'
+              '可在「设置 → 隐私」中重新开启。'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(tr('取消')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(tr('关闭保护并进入')),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    // setBiometricLock(false) 会清掉会话解锁标记，故之后要显式标记已解锁，
+    // 否则外层 _maybeShowLock 会再次拦截。
+    await AppSettings.instance.setBiometricLock(false);
+    AppSettings.instance.markUnlocked();
+    widget.onUnlocked?.call();
+    if (mounted) Navigator.of(context).pop(true);
   }
 
   @override
@@ -145,14 +174,30 @@ class _LockPageState extends State<LockPage> {
                     if (!_hasBiometrics) ...[
                       const SizedBox(height: 12),
                       Text(
-                        tr('如需解锁保护，请在设置中关闭面容解锁，或检查系统生物识别设置'),
+                        tr('未检测到可用的面容或指纹：请检查系统生物识别设置及本 App 的权限'),
                         style: TextStyle(
                           fontSize: 12,
                           color: dark ? const Color(0xFF9AA0A6) : const Color(0xFF6B6F76),
                         ),
                         textAlign: TextAlign.center,
                       ),
+                      const SizedBox(height: 4),
+                      TextButton(
+                        onPressed: _checking ? null : _init,
+                        child: Text(tr('重新检测')),
+                      ),
                     ],
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _disableLockAndEnter,
+                      child: Text(
+                        tr('无法验证？关闭锁屏保护并进入'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: dark ? const Color(0xFF7A8088) : const Color(0xFF8E9299),
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),
