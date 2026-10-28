@@ -11,6 +11,10 @@ import 'settings/app_settings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // 图片缓存上限。默认 100MB，而一张 1080p 截图解码后约 8MB，只够十来张，
+  // 网格滚动时会不断淘汰重解码。配合 AuthImage 的 cacheWidth（按显示尺寸解码，
+  // 单张降到 1~2MB），200MB 可以稳装几十张，滚动不再反复重载。
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 200 << 20;
   // release 下 build 异常默认显示纯灰屏，换成可见的报错文本，便于定位问题。
   // release 不渲染异常原文：其中可能带内网地址、服务器路径等内部信息。
   ErrorWidget.builder = (details) => ColoredBox(

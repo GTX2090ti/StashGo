@@ -1016,11 +1016,18 @@ class StashApi {
 
   // ---------- 短片查询 ----------
 
+  /// 列表卡片字段：只取列表真正渲染的。
+  ///
+  /// 详情页走 [findScene] 单独取全量，不依赖这里，所以可以放心瘦身：
+  /// - `details` / `urls`：列表不显示，但 `details` 是长文本，是体积大头；
+  /// - `files.path` / `files.width`：列表只需要 `height`（宽高比）和 `duration`（时长）；
+  /// - `captions` 必须留 `caption_type` —— [Scene.captions] 取的就是它，
+  ///   换成 `language_code` 会让「有无字幕」徽标恒为 false。
   static const _sceneCardFields = '''
-      id title details date created_at rating100 o_counter play_count organized
-      urls studio { id name } performers { id name } tags { id name }
-      paths { screenshot webp } files { path height width duration }
-      captions { language_code caption_type }
+      id title date created_at rating100 o_counter play_count organized
+      studio { id name } performers { id name } tags { id name }
+      paths { screenshot webp } files { height duration }
+      captions { caption_type }
   ''';
 
   Future<FindResult<Scene>> findScenes({
@@ -1059,8 +1066,37 @@ class StashApi {
     );
   }
 
+  // ---- 合并搜索缓存 ----
+
+  /// 合并搜索结果缓存：翻页 / 退回再进时复用，避免重复发起 4 路请求。
+  static final Map<String, _SearchCacheEntry> _searchCache = {};
+  static const int _searchCacheTtlMs = 60 * 1000;
+  static const int _searchCacheMaxEntries = 8;
+
+  /// 清空合并搜索缓存（新建 / 删除实体、批量任务完成、切换服务器后调用）。
+  static void clearSearchCache() {
+    _searchCache.clear();
+    _sceneFilterHasStudios = null;
+  }
+
+  static String _searchCacheKey(
+    String term,
+    String sort,
+    String direction,
+    Map<String, dynamic>? sceneFilter,
+  ) =>
+      '$term\u0001$sort\u0001$direction\u0001'
+      '${sceneFilter == null || sceneFilter.isEmpty ? '' : jsonEncode(sceneFilter)}';
+
   /// 关键词合并搜索：标题/路径/详情（q）+ 演员名 + 标签名 + 工作室名。
-  /// 各路由取全量匹配后按 sort 在客户端排序并本地分页。
+  ///
+  /// [q] 只覆盖场景自身字段，不含关联实体名 —— v0.31 实测：演员名与日文工作室名
+  /// 用 q 一条都搜不到，标签名只能命中一部分。所以这 4 路必须都查，不能合并成一次。
+  ///
+  /// 性能要点（原实现很慢的三个原因，均已修正）：
+  /// 1. 4 路原来串行，现在并行 —— 总耗时从"4 路之和"降到"最慢的一路"；
+  /// 2. 每路原来固定拉 1000 条，现在只按 `page*perPage` 取够当前页的量；
+  /// 3. 结果按查询条件缓存 60s，翻页不再从第 1 页重新拉。
   Future<FindResult<Scene>> searchScenes({
     required String term,
     required int page,
@@ -1069,80 +1105,219 @@ class StashApi {
     String direction = 'DESC',
     Map<String, dynamic>? sceneFilter,
   }) async {
-    final map = <String, Scene>{};
+    final key = _searchCacheKey(term, sort, direction, sceneFilter);
+    final need = page * perPage;
 
-    Future<void> collect(String? q, Map<String, dynamic>? sf) async {
-      var p = 1;
-      for (;;) {
-        final r = await findScenes(
-          page: p,
-          perPage: 1000,
-          q: q,
-          sort: sort,
-          direction: direction,
-          sceneFilter: sf,
-        );
-        for (final s in r.items) {
-          map[s.id] = s;
-        }
-        if (r.items.isEmpty || p * 1000 >= r.count || p >= 8) break;
-        p++;
-      }
+    final cached = _searchCache[key];
+    if (cached != null &&
+        cached.need >= need &&
+        DateTime.now().millisecondsSinceEpoch - cached.atMs < _searchCacheTtlMs) {
+      return cached.slice(page, perPage);
     }
 
-    // 1) 标题/路径/详情
-    await collect(term, sceneFilter);
+    final routes = await _buildSearchRoutes(term, sceneFilter);
 
-    // 2) 演员名
-    try {
-      final ps = await findPerformers(page: 1, perPage: 50, q: term);
-      if (ps.items.isNotEmpty) {
-        await collect(null, {
+    // 并集去重后的总数只能靠实际 id 来判断（各路 count 相加会因重叠而虚高）。
+    // 这里与主查询并行跑，避免串行叠加等待。
+    final countFuture = _countSearchUnion(routes, sort, direction)
+        .catchError((Object _) => -1);
+
+    final buckets = await Future.wait(
+      routes.map((r) => _collectRoute(r, need, sort, direction)),
+    );
+
+    final map = <String, Scene>{};
+    for (final bucket in buckets) {
+      for (final s in bucket) {
+        map[s.id] = s;
+      }
+    }
+    final merged = map.values.toList();
+    _sortScenesClient(merged, sort, direction);
+
+    // 合并后不足 need 条说明各路的匹配结果都已取完，此时长度即精确总数。
+    var total = merged.length;
+    if (merged.length >= need) {
+      final exact = await countFuture;
+      if (exact >= 0) total = exact;
+    }
+
+    final entry = _SearchCacheEntry(
+      items: merged,
+      total: total,
+      need: need,
+      atMs: DateTime.now().millisecondsSinceEpoch,
+    );
+    if (_searchCache.length >= _searchCacheMaxEntries) {
+      _searchCache.remove(_searchCache.keys.first);
+    }
+    _searchCache[key] = entry;
+    return entry.slice(page, perPage);
+  }
+
+  /// 解析 4 路搜索条件，三个实体查询并行发起。
+  Future<List<_SearchRoute>> _buildSearchRoutes(
+    String term,
+    Map<String, dynamic>? sceneFilter,
+  ) async {
+    final routes = <_SearchRoute>[_SearchRoute(term, sceneFilter)];
+
+    Future<_SearchRoute?> byPerformers() async {
+      try {
+        final ps = await findPerformers(page: 1, perPage: 50, q: term);
+        if (ps.items.isEmpty) return null;
+        return _SearchRoute(null, {
           ...?sceneFilter,
           'performers': {
             'value': ps.items.map((e) => e.id).toList(),
             'modifier': 'INCLUDES',
           },
         });
+      } catch (_) {
+        return null;
       }
-    } catch (_) {}
+    }
 
-    // 3) 标签名
-    try {
-      final ts = await findTagsByQ(term);
-      if (ts.isNotEmpty) {
-        await collect(null, {
+    Future<_SearchRoute?> byTags() async {
+      try {
+        final ts = await findTagsByQ(term);
+        if (ts.isEmpty) return null;
+        return _SearchRoute(null, {
           ...?sceneFilter,
           'tags': {
             'value': ts.map((e) => e.id).toList(),
             'modifier': 'INCLUDES',
           },
         });
+      } catch (_) {
+        return null;
       }
-    } catch (_) {}
+    }
 
-    // 4) 工作室名
+    Future<_SearchRoute?> byStudios() async {
+      try {
+        final ss = await findStudios(page: 1, perPage: 50, q: term);
+        if (ss.items.isEmpty) return null;
+        final ids = ss.items.map((e) => e.id).toList();
+        // v0.31 起是 `studios`（HierarchicalMultiCriterionInput，modifier 必填）；
+        // 早期版本是 `studio_id` 直接传数组。用错 key 会 422，而 422 在第 4 路里
+        // 被 catch 吞掉，表现为"搜工作室名什么都搜不到"。
+        if (await _sceneFilterSupportsStudios()) {
+          return _SearchRoute(null, {
+            ...?sceneFilter,
+            'studios': {'value': ids, 'modifier': 'INCLUDES'},
+          });
+        }
+        return _SearchRoute(null, {...?sceneFilter, 'studio_id': ids});
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final extra = await Future.wait([byPerformers(), byTags(), byStudios()]);
+    for (final r in extra) {
+      if (r != null) routes.add(r);
+    }
+    return routes;
+  }
+
+  /// SceneFilterType 是否提供 `studios`（v0.31+）。结果缓存，随 [clearSearchCache] 失效。
+  static bool? _sceneFilterHasStudios;
+
+  Future<bool> _sceneFilterSupportsStudios() async {
+    final cached = _sceneFilterHasStudios;
+    if (cached != null) return cached;
     try {
-      final ss = await findStudios(page: 1, perPage: 50, q: term);
-      if (ss.items.isNotEmpty) {
-        await collect(null, {
-          ...?sceneFilter,
-          'studio_id': ss.items.map((e) => e.id).toList(),
-        });
+      final d = await query(
+        'query { __type(name: "SceneFilterType") { inputFields { name } } }',
+      );
+      final fs = d?['__type']?['inputFields'];
+      if (fs is List) {
+        final has = fs.any((e) => e is Map && e['name'] == 'studios');
+        _sceneFilterHasStudios = has;
+        return has;
       }
     } catch (_) {}
+    return true; // 探测失败按新版处理，旧版会走 catch 不影响其余三路
+  }
 
-    final all = map.values.toList();
-    _sortScenesClient(all, sort, direction);
-    final total = all.length;
-    final start = (page - 1) * perPage;
-    final items = start >= total
-        ? <Scene>[]
-        : all.sublist(
-            start,
-            (start + perPage) > total ? total : start + perPage,
-          );
-    return FindResult<Scene>(count: total, items: items);
+  /// 单路取够 [need] 条：合并后切第 page 页所需的量即 page*perPage。
+  Future<List<Scene>> _collectRoute(
+    _SearchRoute route,
+    int need,
+    String sort,
+    String direction,
+  ) async {
+    final out = <Scene>[];
+    var pageNo = 1;
+    var left = need;
+    while (left > 0 && pageNo <= 8) {
+      final pp = left > 1000 ? 1000 : left;
+      final res = await findScenes(
+        page: pageNo,
+        perPage: pp,
+        q: route.q,
+        sort: sort,
+        direction: direction,
+        sceneFilter: route.sf,
+      );
+      out.addAll(res.items);
+      if (res.items.length < pp) break; // 这一路的结果已取完
+      left -= res.items.length;
+      pageNo++;
+    }
+    return out;
+  }
+
+  /// 4 路并集去重后的精确条数。只取 id：1000 条约 14KB / 0.1s，不带关联 JOIN。
+  Future<int> _countSearchUnion(
+    List<_SearchRoute> routes,
+    String sort,
+    String direction,
+  ) async {
+    final sets = await Future.wait(
+      routes.map((r) => _collectRouteIds(r, sort, direction)),
+    );
+    final ids = <String>{};
+    for (final s in sets) {
+      ids.addAll(s);
+    }
+    return ids.length;
+  }
+
+  Future<Set<String>> _collectRouteIds(
+    _SearchRoute route,
+    String sort,
+    String direction,
+  ) async {
+    const gq = '''
+      query SearchIds(\$filter: FindFilterType!, \$sf: SceneFilterType) {
+        findScenes(filter: \$filter, scene_filter: \$sf) { count scenes { id } }
+      }''';
+    final ids = <String>{};
+    var pageNo = 1;
+    while (pageNo <= 8) {
+      final filter = <String, dynamic>{
+        'page': pageNo,
+        'per_page': 1000,
+        'sort': sort,
+        'direction': direction,
+        if (route.q != null && route.q!.trim().isNotEmpty) 'q': route.q!.trim(),
+      };
+      final vars = <String, dynamic>{'filter': filter};
+      if (route.sf != null && route.sf!.isNotEmpty) vars['sf'] = route.sf;
+      final d = await query(gq, vars);
+      final fs = d?['findScenes'];
+      final list = fs?['scenes'];
+      if (list is! List || list.isEmpty) break;
+      for (final e in list) {
+        if (e is Map && e['id'] != null) ids.add(e['id'].toString());
+      }
+      final count = fs?['count'] is int ? fs!['count'] as int : 0;
+      if (pageNo * 1000 >= count) break;
+      pageNo++;
+    }
+    return ids;
   }
 
   /// 客户端排序（合并搜索用），空日期/空值永远排最后。
@@ -1780,6 +1955,7 @@ class StashApi {
     final v = d?['performerCreate'];
     if (v == null || v['id'] == null)
       throw ApiException(tr('performerCreate 失败'));
+    clearSearchCache(); // 新建实体后合并搜索结果可能变化
     return v['id'].toString();
   }
 
@@ -1794,6 +1970,7 @@ class StashApi {
     final v = d?[m];
     if (v == null || v['id'] == null)
       throw ApiException(tr('{m} 失败', {'m': m}));
+    clearSearchCache(); // 新建实体后合并搜索结果可能变化
     return v['id'].toString();
   }
 
@@ -1811,6 +1988,7 @@ class StashApi {
     final v = d?[m];
     if (v == null || v['id'] == null)
       throw ApiException(tr('{m} 失败', {'m': m}));
+    clearSearchCache(); // 新建实体后合并搜索结果可能变化
     return v['id'].toString();
   }
 
@@ -1825,6 +2003,7 @@ class StashApi {
     await query(q, {
       'input': {'id': id},
     });
+    clearSearchCache();
   }
 
   /// 删除工作室（0.31+ mutation 名为 studioDestroy，兼容旧版 destroyStudio）。
@@ -1838,6 +2017,7 @@ class StashApi {
     await query(q, {
       'input': {'id': id},
     });
+    clearSearchCache();
   }
 
   /// 删除短片（0.31+ mutation 名为 sceneDestroy，兼容旧版 destroyScene）。
@@ -2196,3 +2376,40 @@ class StashApi {
 
 /// 供 TypedData 导入使用（base64Encode 需要 Uint8List）。
 typedef Bytes = Uint8List;
+
+/// 合并搜索的一路条件：q 与 scene_filter 至少有一个。
+class _SearchRoute {
+  const _SearchRoute(this.q, this.sf);
+  final String? q;
+  final Map<String, dynamic>? sf;
+}
+
+/// 合并搜索的结果缓存条目。
+class _SearchCacheEntry {
+  const _SearchCacheEntry({
+    required this.items,
+    required this.total,
+    required this.need,
+    required this.atMs,
+  });
+
+  /// 已按 sort 全局排序的合并结果。
+  final List<Scene> items;
+  final int total;
+
+  /// 拉取时覆盖到的条数；本次请求 need 不超过它才能复用。
+  final int need;
+  final int atMs;
+
+  FindResult<Scene> slice(int page, int perPage) {
+    final start = (page - 1) * perPage;
+    if (start >= items.length) {
+      return FindResult<Scene>(count: total, items: const <Scene>[]);
+    }
+    final end = start + perPage;
+    return FindResult<Scene>(
+      count: total,
+      items: items.sublist(start, end > items.length ? items.length : end),
+    );
+  }
+}

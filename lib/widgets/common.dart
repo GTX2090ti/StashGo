@@ -11,8 +11,20 @@ import '../settings/app_settings.dart';
 import '../l10n/l10n.dart';
 
 /// 全局 API 客户端：跟随当前档案 / 生效地址重建。
-StashApi buildApi() =>
-    StashApi(AppSettings.instance.baseUrl, AppSettings.instance.apiKey);
+///
+/// 生效地址变了（切换档案、内外网自动选路）说明换了一个库，合并搜索缓存必须作废，
+/// 否则会拿上一个库的搜索结果分页。
+String? _lastApiBase;
+
+StashApi buildApi() {
+  final settings = AppSettings.instance;
+  final base = settings.baseUrl;
+  if (_lastApiBase != null && _lastApiBase != base) {
+    StashApi.clearSearchCache();
+  }
+  _lastApiBase = base;
+  return StashApi(base, settings.apiKey);
+}
 
 /// 地址是否为「明文 HTTP 且非私有网段」。
 /// ApiKey 走请求头，这类地址下它会以明文过网，中间人 / 伪热点可直接读走。
@@ -289,12 +301,23 @@ class _AuthImageState extends State<AuthImage> {
     if (url.isEmpty) {
       child = placeholder;
     } else {
+      // 按显示尺寸解码。截图原图 1920×1080 解码后 RGBA 约 8MB，默认 ImageCache
+      // 只装得下十几张，网格滚动会反复淘汰重解码；给到实际像素宽度即可。
+      final dpr = MediaQuery.devicePixelRatioOf(context);
+      final cacheW =
+          widget.width != null ? (widget.width! * dpr).round() : null;
+      final cacheH = cacheW == null && widget.height != null
+          ? (widget.height! * dpr).round()
+          : null;
       child = Image.network(
         url,
         headers: api.imageHeaders,
         fit: widget.fit,
         width: widget.width,
         height: widget.height,
+        cacheWidth: cacheW,
+        cacheHeight: cacheH,
+        filterQuality: FilterQuality.low,
         errorBuilder: (_, __, ___) => placeholder,
         loadingBuilder: (ctx, child, progress) =>
             progress == null ? child : placeholder,
